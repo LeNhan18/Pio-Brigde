@@ -50,7 +50,6 @@ dependencies:
   cached_network_image: ^3.3.1
   
   # Animations & Transitions
-  auto_animated: ^2.3.0
   flutter_staggered_animations: ^1.1.1
 
 dev_dependencies:
