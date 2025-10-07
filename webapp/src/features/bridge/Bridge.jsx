@@ -1,12 +1,9 @@
 import React, { useState } from 'react'
-import { useAccount } from 'wagmi'
 
 export default function Bridge(){
-  const { address, isConnected } = useAccount()
   const [amount, setAmount] = useState('')
 
   const onBridge = () => {
-    if(!isConnected) return alert('Vui lòng kết nối ví')
     if(!amount || Number(amount) <= 0) return
     alert(`Bridge ${amount} PIO (demo)`)
   }
@@ -14,9 +11,7 @@ export default function Bridge(){
   return (
     <div className="panel" style={{minWidth:320, maxWidth:460}}>
       <div style={{fontWeight:700, marginBottom:10}}>PIO → wPIO Bridge</div>
-      <div style={{opacity:.8, fontSize:13, marginBottom:16}}>
-        {isConnected ? `Đã kết nối: ${address?.slice(0,6)}...${address?.slice(-4)}` : 'Chưa kết nối ví'}
-      </div>
+      <div style={{opacity:.8, fontSize:13, marginBottom:16}}>Chế độ demo UI (chưa kết nối ví)</div>
       <div className="row" style={{marginBottom:12}}>
         <input placeholder="Số lượng PIO" value={amount} onChange={e=>setAmount(e.target.value)} />
         <button className="action" onClick={onBridge}>Bridge</button>
