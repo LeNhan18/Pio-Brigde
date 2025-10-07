@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'dart:ui';
+import 'dart:math';
 
 class Bridge3DAnimation extends StatefulWidget {
   final Widget child;
@@ -217,6 +219,157 @@ class ParticlePainter extends CustomPainter {
           paint,
         );
       }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class StarfieldPainter extends CustomPainter {
+  final int starCount;
+  final double twinkle;
+  StarfieldPainter({this.starCount = 400, this.twinkle = 0.2});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rnd = Random(42);
+    final paint = Paint()..style = PaintingStyle.fill;
+    for (int i = 0; i < starCount; i++) {
+      final x = rnd.nextDouble() * size.width;
+      final y = rnd.nextDouble() * size.height;
+      final radius = rnd.nextDouble() * 1.4 + 0.2;
+      final alpha = (150 + rnd.nextInt(105)).clamp(0, 255);
+      paint.color = Colors.white.withAlpha(alpha);
+      canvas.drawCircle(Offset(x, y), radius, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class NebulaLayer extends StatelessWidget {
+  final List<Color> colors;
+  final double blurSigma;
+  final double opacity;
+  const NebulaLayer({Key? key, required this.colors, this.blurSigma = 120, this.opacity = 0.25}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Opacity(
+        opacity: opacity,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(-0.6, -0.5),
+                radius: 1.2,
+                colors: colors,
+                stops: const [0.0, 0.5, 1.0],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ParallaxBackground extends StatelessWidget {
+  final Widget child;
+  const ParallaxBackground({Key? key, required this.child}) : super(key: key);
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, constraints) {
+      return Listener(
+        onPointerHover: (_) {},
+        child: Stack(
+          children: [
+            CustomPaint(
+              size: Size.infinite,
+              painter: StarfieldPainter(starCount: 500, twinkle: 0.15),
+            ),
+            const Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF0B1020), Color(0xFF060812)],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            NebulaLayer(colors: const [Color(0xFF6D28D9), Color(0xFF0EA5E9), Colors.transparent], opacity: 0.22),
+            NebulaLayer(colors: const [Color(0xFF9333EA), Color(0xFF06B6D4), Colors.transparent], opacity: 0.18),
+            child,
+          ],
+        ),
+      );
+    });
+  }
+}
+
+class FloatingComets extends StatefulWidget {
+  final int count;
+  const FloatingComets({Key? key, this.count = 3}) : super(key: key);
+  @override
+  State<FloatingComets> createState() => _FloatingCometsState();
+}
+
+class _FloatingCometsState extends State<FloatingComets> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  final rnd = Random();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 12))..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        return CustomPaint(
+          size: Size.infinite,
+          painter: _CometPainter(progress: _controller.value, count: widget.count),
+        );
+      },
+    );
+  }
+}
+
+class _CometPainter extends CustomPainter {
+  final double progress;
+  final int count;
+  _CometPainter({required this.progress, required this.count});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..strokeCap = StrokeCap.round;
+    for (int i = 0; i < count; i++) {
+      final t = (progress + i / count) % 1.0;
+      final x = size.width * (1.1 - t);
+      final y = size.height * (0.2 + 0.6 * (i + 1) / (count + 1));
+      paint.shader = const LinearGradient(
+        colors: [Color(0xFF93C5FD), Color(0xFFA78BFA), Colors.transparent],
+      ).createShader(Rect.fromLTWH(x - 120, y - 2, 120, 4));
+      paint.strokeWidth = 2;
+      canvas.drawLine(Offset(x, y), Offset(x - 120, y - 2), paint);
+      canvas.drawCircle(Offset(x, y), 2.5, Paint()..color = const Color(0xFF93C5FD));
     }
   }
 
