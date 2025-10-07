@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const Color primaryColor = Color(0xFF6366F1); // Indigo
-  static const Color secondaryColor = Color(0xFF8B5CF6); // Purple
-  static const Color accentColor = Color(0xFF06B6D4); // Cyan
-  static const Color backgroundColor = Color(0xFF0F172A); // Slate 900
-  static const Color surfaceColor = Color(0xFF1E293B); // Slate 800
-  static const Color cardColor = Color(0xFF334155); // Slate 700
+  static const Color primaryColor = Color(0xFF7C3AED); // Electric Purple
+  static const Color secondaryColor = Color(0xFF22D3EE); // Neon Cyan
+  static const Color accentColor = Color(0xFFA78BFA); // Soft Violet
+  static const Color backgroundColor = Color(0xFF060812); // Deep Space
+  static const Color surfaceColor = Color(0xFF0B1020); // Cosmic Layer
+  static const Color cardColor = Color(0xFF151A2C); // Panel
 
   static ThemeData get darkTheme {
     return ThemeData(
@@ -105,7 +105,7 @@ class AppTheme {
     return const LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: [backgroundColor, surfaceColor],
+      colors: [Color(0xFF05070F), Color(0xFF0B1020)],
     );
   }
 
