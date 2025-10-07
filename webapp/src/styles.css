@@ -1,0 +1,16 @@
+:root{
+  --bg1:#05070F; --bg2:#0B1020; --purple:#7C3AED; --cyan:#22D3EE; --white:#fff;
+}
+*{box-sizing:border-box}
+html,body,#root,.app-root{height:100%;margin:0}
+body{background:linear-gradient(180deg,var(--bg1),var(--bg2));color:var(--white);font-family:Inter,system-ui,Arial}
+.topbar{position:fixed;inset:0 0 auto 0;display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:linear-gradient(90deg,#00000055,#00000000);backdrop-filter:blur(6px);z-index:10}
+.brand{font-weight:700;letter-spacing:.6px}
+.content{position:relative;z-index:5;display:flex;justify-content:center;align-items:center;height:100%}
+.panel{background:#0f152d99;border:1px solid #ffffff22;border-radius:16px;box-shadow:0 10px 40px #00000055;padding:20px;backdrop-filter:blur(8px)}
+.row{display:flex;gap:12px}
+input,button{all:unset}
+input{padding:10px 12px;border:1px solid #ffffff33;border-radius:10px;min-width:220px}
+button.action{padding:10px 14px;background:linear-gradient(90deg,var(--purple),var(--cyan));border-radius:10px;cursor:pointer}
+
+

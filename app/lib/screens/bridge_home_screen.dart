@@ -44,39 +44,20 @@ class _BridgeHomeScreenState extends State<BridgeHomeScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
-        ),
+      body: ParallaxBackground(
         child: Stack(
           children: [
-            // Background particles
-            Positioned.fill(
-              child: Floating3DParticles(
-                particleCount: 30,
-                particleColor: AppTheme.primaryColor,
-                speed: 0.5,
-              ),
-            ),
-            
-            // Main content
+            const Positioned.fill(child: FloatingComets(count: 4)),
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   children: [
-                    // Header
                     _buildHeader(),
-                    const SizedBox(height: 40),
-                    
-                    // Bridge status
+                    const SizedBox(height: 28),
                     _buildBridgeStatus(),
-                    const SizedBox(height: 40),
-                    
-                    // Action cards
-                    Expanded(
-                      child: _buildActionCards(),
-                    ),
+                    const SizedBox(height: 24),
+                    Expanded(child: _buildActionPlanets()),
                   ],
                 ),
               ),
@@ -177,46 +158,55 @@ class _BridgeHomeScreenState extends State<BridgeHomeScreen>
       .slideX(begin: -0.3, end: 0);
   }
 
-  Widget _buildActionCards() {
-    return GridView.count(
-      crossAxisCount: 2,
-      childAspectRatio: 1.2,
-      children: [
-        Bridge3DCard(
-          title: 'Bridge PIO',
+  Widget _buildActionPlanets() {
+    return LayoutBuilder(builder: (context, constraints) {
+      final isWide = constraints.maxWidth > 720;
+      final children = <Widget>[
+        _PlanetAction(
+          label: 'Bridge PIO',
           subtitle: 'Pione Zero → Goerli',
+          color: AppTheme.primaryColor,
+          onTap: _navigateToBridge,
+          glow: AppTheme.secondaryColor,
           icon: Icons.swap_horiz,
-          primaryColor: AppTheme.primaryColor,
-          secondaryColor: AppTheme.secondaryColor,
-          onTap: () => _navigateToBridge(),
-          isActive: true,
         ),
-        Bridge3DCard(
-          title: 'History',
+        _PlanetAction(
+          label: 'History',
           subtitle: 'Transaction Records',
+          color: AppTheme.accentColor,
+          onTap: _navigateToHistory,
+          glow: AppTheme.primaryColor,
           icon: Icons.history,
-          primaryColor: AppTheme.accentColor,
-          secondaryColor: AppTheme.primaryColor,
-          onTap: () => _navigateToHistory(),
         ),
-        Bridge3DCard(
-          title: 'Security',
+        _PlanetAction(
+          label: 'Security',
           subtitle: 'AI Protection',
+          color: Colors.greenAccent,
+          onTap: _navigateToSecurity,
+          glow: Colors.green,
           icon: Icons.security,
-          primaryColor: Colors.green,
-          secondaryColor: Colors.greenAccent,
-          onTap: () => _navigateToSecurity(),
         ),
-        Bridge3DCard(
-          title: 'Settings',
+        _PlanetAction(
+          label: 'Settings',
           subtitle: 'Preferences',
+          color: Colors.orangeAccent,
+          onTap: _navigateToSettings,
+          glow: Colors.deepOrange,
           icon: Icons.settings,
-          primaryColor: Colors.orange,
-          secondaryColor: Colors.deepOrange,
-          onTap: () => _navigateToSettings(),
         ),
-      ],
-    );
+      ];
+      return Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1000),
+          child: Wrap(
+            spacing: 28,
+            runSpacing: 28,
+            alignment: WrapAlignment.center,
+            children: children,
+          ),
+        ),
+      );
+    });
   }
 
   void _navigateToBridge() {
@@ -244,6 +234,90 @@ class _BridgeHomeScreenState extends State<BridgeHomeScreen>
     // TODO: Navigate to settings screen
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Navigating to Settings...')),
+    );
+  }
+}
+
+class _PlanetAction extends StatefulWidget {
+  final String label;
+  final String subtitle;
+  final Color color;
+  final Color glow;
+  final IconData icon;
+  final VoidCallback onTap;
+  const _PlanetAction({
+    Key? key,
+    required this.label,
+    required this.subtitle,
+    required this.color,
+    required this.glow,
+    required this.icon,
+    required this.onTap,
+  }) : super(key: key);
+
+  @override
+  State<_PlanetAction> createState() => _PlanetActionState();
+}
+
+class _PlanetActionState extends State<_PlanetAction> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 6))..repeat();
+  }
+  @override
+  void dispose() { _controller.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          final t = _controller.value;
+          final tilt = (sin(t * 2 * pi) * 0.05);
+          return Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.001)
+              ..rotateX(tilt)
+              ..rotateY(-tilt),
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [widget.color.withOpacity(0.95), widget.color.withOpacity(0.4)],
+                  radius: 0.85,
+                ),
+                boxShadow: [
+                  BoxShadow(color: widget.glow.withOpacity(0.45), blurRadius: 40, spreadRadius: 6),
+                ],
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Positioned(
+                    top: 24,
+                    child: Icon(widget.icon, size: 36, color: Colors.white),
+                  ),
+                  Positioned(
+                    bottom: 52,
+                    child: Text(widget.label, style: Theme.of(context).textTheme.headlineSmall),
+                  ),
+                  Positioned(
+                    bottom: 28,
+                    child: Text(widget.subtitle, style: Theme.of(context).textTheme.bodySmall),
+                  ),
+                ],
+              ),
+            ).animate().fadeIn(duration: 800.ms).scale(begin: const Offset(0.9,0.9), end: const Offset(1,1), duration: 700.ms),
+          );
+        },
+      ),
     );
   }
 }
