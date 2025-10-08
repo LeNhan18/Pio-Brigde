@@ -1,6 +1,12 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit'
 import { http, createConfig } from 'wagmi'
 import { goerli } from 'wagmi/chains'
+import { Buffer } from 'buffer'
+
+// Polyfill for buffer
+if (typeof globalThis.Buffer === 'undefined') {
+  globalThis.Buffer = Buffer
+}
 
 export const pioneZero = {
   id: 5080,
@@ -16,14 +22,13 @@ export const pioneZero = {
 
 export const chains = [goerli, pioneZero]
 
-export const wagmiConfig = createConfig(getDefaultConfig({
-  appName: 'PIO Bridge',
-  projectId: import.meta.env.VITE_WALLETCONNECT_ID || 'demo',
+export const wagmiConfig = createConfig({
   chains,
   transports: {
     [goerli.id]: http(import.meta.env.VITE_GOERLI_RPC || 'https://rpc.ankr.com/eth_goerli'),
     [pioneZero.id]: http(import.meta.env.VITE_PIONEZERO_RPC || 'https://rpc.zeroscan.org'),
   },
-}))
+  ssr: false,
+})
 
 
