@@ -1,56 +1,39 @@
-import React, { useState, useEffect } from 'react'
-import { useAccount, useBalance, useChainId, useSwitchChain } from 'wagmi'
-import { parseEther, formatEther } from 'viem'
+import React, { useState } from 'react'
+import { useBridge } from '../../hooks/useBridge'
+import TransactionStatus from '../../components/TransactionStatus'
 
 export default function Bridge(){
-  const { address, isConnected } = useAccount()
-  const chainId = useChainId()
-  const { switchChain } = useSwitchChain()
+  const {
+    isConnected,
+    address,
+    chainId,
+    balance,
+    transactions,
+    isProcessing,
+    bridgePZO,
+    switchChain,
+    PIOLock_ADDRESS,
+    PIOMint_ADDRESS
+  } = useBridge()
+
   const [amount, setAmount] = useState('')
   const [destination, setDestination] = useState('')
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [transactions, setTransactions] = useState([])
-
-  // Get balance
-  const { data: balance } = useBalance({
-    address: address,
-    chainId: chainId === 5080 ? 5080 : 5,
-  })
-
-  // Contract addresses (update with deployed addresses)
-  const PIOLock_ADDRESS = '0x...' // Pione Zero
-  const PIOMint_ADDRESS = '0x...' // Goerli
 
   const onBridge = async () => {
-    if (!isConnected) return alert('Vui lòng kết nối ví')
-    if (!amount || Number(amount) <= 0) return alert('Nhập số lượng hợp lệ')
-    if (!destination) return alert('Nhập địa chỉ đích')
-
-    setIsProcessing(true)
     try {
-      // Switch to Pione Zero for locking
-      if (chainId !== 5080) {
-        await switchChain({ chainId: 5080 })
-        return
-      }
-
-      // TODO: Call PIOLock.lock() contract
-      const tx = {
-        hash: '0x' + Math.random().toString(16).substr(2, 64),
-        amount: amount,
-        destination: destination,
-        timestamp: Date.now(),
-        status: 'pending'
-      }
-      
-      setTransactions(prev => [tx, ...prev])
-      alert(`Bridge ${amount} PIO initiated! TX: ${tx.hash}`)
-      
+      await bridgePZO(amount, destination)
+      setAmount('')
+      setDestination('')
     } catch (error) {
-      alert('Bridge failed: ' + error.message)
-    } finally {
-      setIsProcessing(false)
+      alert(error.message)
     }
+  }
+
+  const onViewExplorer = (hash) => {
+    const explorerUrl = chainId === 5080 
+      ? `https://zeroscan.org/tx/${hash}`
+      : `https://goerli.etherscan.io/tx/${hash}`
+    window.open(explorerUrl, '_blank')
   }
 
   const quickAmounts = [0.25, 0.5, 0.75, 1.0]
@@ -60,7 +43,7 @@ export default function Bridge(){
       {/* Bridge Form */}
       <div className="panel" style={{ flex: 1, minWidth: 400 }}>
         <div style={{ fontWeight: 700, marginBottom: 20, fontSize: 24 }}>
-          PIO → wPIO Bridge
+          PZO → wPZO Bridge
         </div>
         
         {/* Connection Status */}
@@ -90,7 +73,7 @@ export default function Bridge(){
 
         {/* Amount Input */}
         <div style={{ marginBottom: 16 }}>
-          <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>Số lượng PIO</label>
+          <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>Số lượng PZO</label>
           <input 
             placeholder="0.0" 
             value={amount} 
@@ -148,11 +131,17 @@ export default function Bridge(){
             cursor: isProcessing || !isConnected ? 'not-allowed' : 'pointer'
           }}
         >
-          {isProcessing ? 'Đang xử lý...' : 'Bridge PIO'}
+          {isProcessing ? 'Đang xử lý...' : 'Bridge PZO'}
         </button>
 
         <div style={{ fontSize: 12, opacity: 0.7, marginTop: 12, textAlign: 'center' }}>
           Multisig 3/5 | Timelock 24h | AI Security
+        </div>
+        
+        {/* Contract Info */}
+        <div style={{ fontSize: 10, opacity: 0.5, marginTop: 8, textAlign: 'center' }}>
+          PIOLock: {PIOLock_ADDRESS?.slice(0, 6)}...{PIOLock_ADDRESS?.slice(-4)} | 
+          PIOMint: {PIOMint_ADDRESS?.slice(0, 6)}...{PIOMint_ADDRESS?.slice(-4)}
         </div>
       </div>
 
@@ -169,35 +158,11 @@ export default function Bridge(){
         ) : (
           <div style={{ maxHeight: 400, overflowY: 'auto' }}>
             {transactions.map((tx, index) => (
-              <div key={index} style={{
-                padding: '12px',
-                border: '1px solid #374151',
-                borderRadius: '8px',
-                marginBottom: '8px',
-                background: '#1F2937'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{tx.amount} PIO</div>
-                    <div style={{ fontSize: 12, opacity: 0.7 }}>
-                      To: {tx.destination?.slice(0, 6)}...{tx.destination?.slice(-4)}
-                    </div>
-                  </div>
-                  <div style={{
-                    padding: '4px 8px',
-                    background: tx.status === 'pending' ? '#F59E0B20' : '#10B98120',
-                    color: tx.status === 'pending' ? '#F59E0B' : '#10B981',
-                    borderRadius: '4px',
-                    fontSize: 12,
-                    fontWeight: 600
-                  }}>
-                    {tx.status}
-                  </div>
-                </div>
-                <div style={{ fontSize: 11, opacity: 0.6, marginTop: 4 }}>
-                  TX: {tx.hash?.slice(0, 10)}...{tx.hash?.slice(-8)}
-                </div>
-              </div>
+              <TransactionStatus 
+                key={index} 
+                transaction={tx} 
+                onViewExplorer={onViewExplorer}
+              />
             ))}
           </div>
         )}
