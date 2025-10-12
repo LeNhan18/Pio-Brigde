@@ -129,10 +129,24 @@ export default function Bridge(){
             fontSize: 16,
             fontWeight: 600,
             opacity: isProcessing || !isConnected ? 0.5 : 1,
-            cursor: isProcessing || !isConnected ? 'not-allowed' : 'pointer'
+            cursor: isProcessing || !isConnected ? 'not-allowed' : 'pointer',
+            position: 'relative',
+            overflow: 'hidden'
           }}
         >
-          {isProcessing ? 'Đang xử lý...' : 'Bridge PZO'}
+          {isProcessing ? (
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <div style={{
+                width: '16px',
+                height: '16px',
+                border: '2px solid rgba(255,255,255,0.3)',
+                borderTop: '2px solid white',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
+              }} />
+              Đang xử lý...
+            </span>
+          ) : 'Bridge PZO'}
         </button>
 
         <div style={{ fontSize: 12, opacity: 0.7, marginTop: 12, textAlign: 'center' }}>
