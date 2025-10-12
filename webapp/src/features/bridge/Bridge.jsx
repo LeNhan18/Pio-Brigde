@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { formatEther } from 'viem'
 import { useBridge } from '../../hooks/useBridge'
 import TransactionStatus from '../../components/TransactionStatus'
 
