@@ -12,18 +12,21 @@ export default function App() {
       <CosmicScene />
       <header className="topbar">
         <div className="brand">PIO Bridge</div>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
             <button
               onClick={() => setActiveTab('bridge')}
               style={{
-                padding: '8px 16px',
-                background: activeTab === 'bridge' ? '#7C3AED' : 'transparent',
-                border: '1px solid #7C3AED',
-                borderRadius: '6px',
+                padding: '10px 20px',
+                background: activeTab === 'bridge' ? 'linear-gradient(135deg, #7C3AED, #22D3EE)' : 'transparent',
+                border: 'none',
+                borderRadius: '8px',
                 color: 'white',
                 fontSize: 14,
-                cursor: 'pointer'
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: activeTab === 'bridge' ? '0 4px 12px rgba(124, 58, 237, 0.3)' : 'none'
               }}
             >
               Bridge
@@ -31,13 +34,16 @@ export default function App() {
             <button
               onClick={() => setActiveTab('validator')}
               style={{
-                padding: '8px 16px',
-                background: activeTab === 'validator' ? '#7C3AED' : 'transparent',
-                border: '1px solid #7C3AED',
-                borderRadius: '6px',
+                padding: '10px 20px',
+                background: activeTab === 'validator' ? 'linear-gradient(135deg, #7C3AED, #22D3EE)' : 'transparent',
+                border: 'none',
+                borderRadius: '8px',
                 color: 'white',
                 fontSize: 14,
-                cursor: 'pointer'
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: activeTab === 'validator' ? '0 4px 12px rgba(124, 58, 237, 0.3)' : 'none'
               }}
             >
               Validator
