@@ -1,6 +1,6 @@
-import React, { Suspense, useRef, useMemo } from 'react'
+import React, { Suspense, useRef, useMemo, useEffect, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, Stars, useTexture } from '@react-three/drei'
+import { OrbitControls, Stars, AdaptiveDpr, AdaptiveEvents } from '@react-three/drei'
 import * as THREE from 'three'
 
 function Planet({ color = '#7C3AED', position = [0,0,0], glow = '#22D3EE', isMain = false, planetType = 'earth' }){
@@ -207,7 +207,7 @@ function Planet({ color = '#7C3AED', position = [0,0,0], glow = '#22D3EE', isMai
 // Floating Particles Component
 function FloatingParticles({ count = 100 }) {
   const meshRef = useRef()
-  const particlesRef = useRef()
+  const particlesRef = useRef([])
   
   const particles = useMemo(() => {
     const temp = new Array(count).fill().map(() => ({
@@ -228,19 +228,21 @@ function FloatingParticles({ count = 100 }) {
   }, [count])
 
   useFrame((state) => {
-    if (particlesRef.current) {
+    if (particlesRef.current && particlesRef.current.length > 0) {
       particlesRef.current.forEach((particle, i) => {
-        particle.position[0] += particle.velocity[0]
-        particle.position[1] += particle.velocity[1]
-        particle.position[2] += particle.velocity[2]
-        
-        // Wrap around
-        if (particle.position[0] > 10) particle.position[0] = -10
-        if (particle.position[0] < -10) particle.position[0] = 10
-        if (particle.position[1] > 10) particle.position[1] = -10
-        if (particle.position[1] < -10) particle.position[1] = 10
-        if (particle.position[2] > 10) particle.position[2] = -10
-        if (particle.position[2] < -10) particle.position[2] = 10
+        if (particle && particle.position) {
+          particle.position[0] += particles[i].velocity[0]
+          particle.position[1] += particles[i].velocity[1]
+          particle.position[2] += particles[i].velocity[2]
+          
+          // Wrap around
+          if (particle.position[0] > 10) particle.position[0] = -10
+          if (particle.position[0] < -10) particle.position[0] = 10
+          if (particle.position[1] > 10) particle.position[1] = -10
+          if (particle.position[1] < -10) particle.position[1] = 10
+          if (particle.position[2] > 10) particle.position[2] = -10
+          if (particle.position[2] < -10) particle.position[2] = 10
+        }
       })
     }
   })
@@ -248,7 +250,15 @@ function FloatingParticles({ count = 100 }) {
   return (
     <group ref={meshRef}>
       {particles.map((particle, i) => (
-        <mesh key={i} position={particle.position} ref={el => particlesRef.current[i] = el}>
+        <mesh 
+          key={i} 
+          position={particle.position} 
+          ref={el => {
+            if (el) {
+              particlesRef.current[i] = el
+            }
+          }}
+        >
           <sphereGeometry args={[particle.size, 8, 8]} />
           <meshBasicMaterial 
             color="#7C3AED" 
@@ -277,7 +287,14 @@ function EnergyRings() {
   return (
     <group>
       {[1, 1.5, 2, 2.5].map((radius, i) => (
-        <mesh key={i} ref={el => ringRefs.current[i] = el}>
+        <mesh 
+          key={i} 
+          ref={el => {
+            if (el) {
+              ringRefs.current[i] = el
+            }
+          }}
+        >
           <torusGeometry args={[radius, 0.02, 8, 100]} />
           <meshBasicMaterial 
             color={i % 2 === 0 ? "#7C3AED" : "#22D3EE"} 
@@ -315,7 +332,15 @@ function PulsingOrbs() {
   return (
     <group>
       {orbPositions.map((pos, i) => (
-        <mesh key={i} position={pos} ref={el => orbRefs.current[i] = el}>
+        <mesh 
+          key={i} 
+          position={pos} 
+          ref={el => {
+            if (el) {
+              orbRefs.current[i] = el
+            }
+          }}
+        >
           <sphereGeometry args={[0.3, 16, 16]} />
           <meshBasicMaterial 
             color={i % 2 === 0 ? "#7C3AED" : "#22D3EE"} 
@@ -329,9 +354,28 @@ function PulsingOrbs() {
 }
 
 export default function CosmicScene(){
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'matchMedia' in window) {
+      const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+      const update = () => setPrefersReducedMotion(!!mq.matches)
+      update()
+      mq.addEventListener?.('change', update)
+      return () => mq.removeEventListener?.('change', update)
+    }
+  }, [])
+
+  const starsCount = prefersReducedMotion ? 2000 : 6000
+  const particlesCount = prefersReducedMotion ? 60 : 150
+
   return (
     <div style={{position:'fixed',inset:0,zIndex:0}}>
-      <Canvas camera={{ position: [0,0,6], fov: 60 }}>
+      <Canvas 
+        camera={{ position: [0,0,6], fov: 60 }}
+        dpr={[1, prefersReducedMotion ? 1.25 : 1.75]}
+        gl={{ antialias: false, powerPreference: 'high-performance', alpha: true }}
+      >
         <color attach="background" args={["#05070F"]} />
         <ambientLight intensity={0.4} />
         <pointLight position={[5,5,5]} intensity={1.5} color="#22D3EE" />
@@ -341,12 +385,14 @@ export default function CosmicScene(){
           <Planet position={[0,0,0]} planetType="earth" />
           <Planet position={[3,1,-2]} planetType="mars" color="#dc2626" glow="#f87171" />
           <Planet position={[-2.5,0.8,-1]} planetType="jupiter" color="#ea580c" glow="#f97316" />
-          <FloatingParticles count={150} />
+          <FloatingParticles count={particlesCount} />
           <EnergyRings />
           <PulsingOrbs />
-          <Stars radius={100} depth={60} count={8000} factor={6} saturation={0} fade speed={1.5} />
+          <Stars radius={100} depth={60} count={starsCount} factor={5} saturation={0} fade speed={prefersReducedMotion ? 1.0 : 1.4} />
         </Suspense>
-        <OrbitControls enablePan={false} enableZoom={false} autoRotate autoRotateSpeed={0.3} />
+        <OrbitControls enablePan={false} enableZoom={false} autoRotate={!prefersReducedMotion} autoRotateSpeed={0.25} />
+        <AdaptiveDpr pixelated />
+        <AdaptiveEvents />
       </Canvas>
     </div>
   )
