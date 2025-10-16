@@ -129,6 +129,26 @@ export default function Bridge(){
         <div className="form-info">
           Multisig 3/5 | Timelock 24h | AI Security
         </div>
+
+        {/* Testnet Info */}
+        <div style={{
+          marginTop: '16px',
+          padding: '12px',
+          background: 'rgba(34, 211, 238, 0.1)',
+          border: '1px solid rgba(34, 211, 238, 0.3)',
+          borderRadius: '8px',
+          fontSize: '12px',
+          color: '#22D3EE'
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: '4px' }}>
+            🧪 Testnet Mode
+          </div>
+          <div>
+            • Pione Zero: Chain ID 5080<br/>
+            • Goerli: Chain ID 5<br/>
+            • Faucet: <a href="https://faucet.zeroscan.org" target="_blank" style={{ color: '#22D3EE' }}>Get PZO</a> | <a href="https://goerlifaucet.com" target="_blank" style={{ color: '#22D3EE' }}>Get ETH</a>
+          </div>
+        </div>
         
         {/* Contract Info */}
         <div className="contract-info">
