@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { formatEther } from 'viem'
 import { useBridge } from '../../hooks/useBridge'
 import TransactionStatus from '../../components/TransactionStatus'
+import AISecurityMonitor from '../../components/AISecurityMonitor'
+import NetworkStatus from '../../components/NetworkStatus'
 
 export default function Bridge(){
   const {
@@ -47,19 +49,16 @@ export default function Bridge(){
           PZO → wPZO Bridge
         </div>
         
+        {/* Network Status */}
+        <NetworkStatus />
+
         {/* Connection Status */}
-        <div style={{ 
-          padding: '12px 16px', 
-          background: isConnected ? '#10B98120' : '#EF444420',
-          border: `1px solid ${isConnected ? '#10B981' : '#EF4444'}`,
-          borderRadius: '8px',
-          marginBottom: 20
-        }}>
-          {isConnected ? (
+        {isConnected && (
+          <div className="status-alert success" style={{ marginTop: '12px' }}>
             <div>
-              <div style={{ fontWeight: 600, color: '#10B981' }}>✅ Đã kết nối ví</div>
+              <div>✅ Đã kết nối ví</div>
               <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>
-                {address?.slice(0, 6)}...{address?.slice(-4)} | Chain: {chainId === 5080 ? 'Pione Zero' : 'Goerli'}
+                {address?.slice(0, 6)}...{address?.slice(-4)}
               </div>
               {balance && (
                 <div style={{ fontSize: 12, opacity: 0.8, marginTop: 2 }}>
@@ -67,38 +66,28 @@ export default function Bridge(){
                 </div>
               )}
             </div>
-          ) : (
-            <div style={{ color: '#EF4444' }}>❌ Chưa kết nối ví</div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Amount Input */}
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>Số lượng PZO</label>
+        <div className="form-group">
+          <label className="form-label">Số lượng PZO</label>
           <input 
+            className="form-input"
             placeholder="0.0" 
             value={amount} 
             onChange={e => setAmount(e.target.value)}
-            style={{ width: '100%', padding: '12px', fontSize: 16 }}
           />
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <div className="quick-amounts">
             {quickAmounts.map(ratio => (
               <button
                 key={ratio}
+                className="quick-amount-btn"
                 onClick={() => {
                   if (balance) {
                     const maxAmount = parseFloat(formatEther(balance.value))
                     setAmount((maxAmount * ratio).toFixed(4))
                   }
-                }}
-                style={{
-                  padding: '6px 12px',
-                  background: '#374151',
-                  border: '1px solid #4B5563',
-                  borderRadius: '6px',
-                  color: 'white',
-                  fontSize: 12,
-                  cursor: 'pointer'
                 }}
               >
                 {ratio * 100}%
@@ -108,42 +97,72 @@ export default function Bridge(){
         </div>
 
         {/* Destination Address */}
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>Địa chỉ đích (Goerli)</label>
+        <div className="form-group">
+          <label className="form-label">Địa chỉ đích (Goerli)</label>
           <input 
+            className="form-input"
             placeholder="0x..." 
             value={destination} 
             onChange={e => setDestination(e.target.value)}
-            style={{ width: '100%', padding: '12px', fontSize: 16 }}
           />
         </div>
 
         {/* Bridge Button */}
         <button 
-          className="action" 
+          className="form-button" 
           onClick={onBridge}
           disabled={isProcessing || !isConnected}
-          style={{
-            width: '100%',
-            padding: '16px',
-            fontSize: 16,
-            fontWeight: 600,
-            opacity: isProcessing || !isConnected ? 0.5 : 1,
-            cursor: isProcessing || !isConnected ? 'not-allowed' : 'pointer'
-          }}
         >
-          {isProcessing ? 'Đang xử lý...' : 'Bridge PZO'}
+          {isProcessing ? (
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <div style={{
+                width: '16px',
+                height: '16px',
+                border: '2px solid rgba(255,255,255,0.3)',
+                borderTop: '2px solid white',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
+              }} />
+              Đang xử lý...
+            </span>
+          ) : 'Bridge PZO'}
         </button>
 
-        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 12, textAlign: 'center' }}>
+        <div className="form-info">
           Multisig 3/5 | Timelock 24h | AI Security
+        </div>
+
+        {/* Testnet Info */}
+        <div style={{
+          marginTop: '16px',
+          padding: '12px',
+          background: 'rgba(34, 211, 238, 0.1)',
+          border: '1px solid rgba(34, 211, 238, 0.3)',
+          borderRadius: '8px',
+          fontSize: '12px',
+          color: '#22D3EE'
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: '4px' }}>
+            🧪 Testnet Mode
+          </div>
+          <div>
+            • Pione Zero: Chain ID 5080<br/>
+            • Goerli: Chain ID 5<br/>
+            • Faucet: <a href="https://faucet.zeroscan.org" target="_blank" style={{ color: '#22D3EE' }}>Get PZO</a> | <a href="https://goerlifaucet.com" target="_blank" style={{ color: '#22D3EE' }}>Get ETH</a>
+          </div>
         </div>
         
         {/* Contract Info */}
-        <div style={{ fontSize: 10, opacity: 0.5, marginTop: 8, textAlign: 'center' }}>
+        <div className="contract-info">
           PIOLock: {PIOLock_ADDRESS?.slice(0, 6)}...{PIOLock_ADDRESS?.slice(-4)} | 
           PIOMint: {PIOMint_ADDRESS?.slice(0, 6)}...{PIOMint_ADDRESS?.slice(-4)}
         </div>
+
+        {/* AI Security Monitor */}
+        <AISecurityMonitor 
+          transactions={transactions} 
+          isActive={isConnected && transactions.length > 0}
+        />
       </div>
 
       {/* Transaction History */}

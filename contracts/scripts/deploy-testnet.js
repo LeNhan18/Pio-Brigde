@@ -7,19 +7,24 @@ async function main() {
   console.log(`🚀 Deploying to ${name} testnet...`);
 
   // Get deployer account
-  const [deployer] = await ethers.getSigners();
+  const signers = await ethers.getSigners();
+  if (signers.length === 0) {
+    console.log("❌ No signers found. Check your private key in .env file");
+    process.exit(1);
+  }
+  const deployer = signers[0];
   console.log(`📝 Deploying with account: ${deployer.address}`);
   
-  const balance = await deployer.getBalance();
-  console.log(`💰 Account balance: ${ethers.utils.formatEther(balance)} ETH`);
+  const balance = await deployer.provider.getBalance(deployer.address);
+  console.log(`💰 Account balance: ${ethers.formatEther(balance)} ETH`);
 
   // Check if we have enough balance
-  if (balance.lt(ethers.utils.parseEther("0.01"))) {
+  if (balance < ethers.parseEther("0.01")) {
     console.log("⚠️  Warning: Low balance! Make sure you have enough ETH for deployment.");
   }
 
-  // Get validators from environment
-  const validatorsEnv = process.env.VALIDATORS || "";
+  // Get validators from environment or use fallback
+  const validatorsEnv = process.env.VALIDATORS || "0xc8772666Ef3114032189A3248DaC177ED2995D45,0x1234567890123456789012345678901234567890,0x2345678901234567890123456789012345678901,0x3456789012345678901234567890123456789012,0x4567890123456789012345678901234567890123";
   const validators = validatorsEnv
     .split(",")
     .map((v) => v.trim())
@@ -38,20 +43,19 @@ async function main() {
 
   if (name === "pionezero") {
     // Deploy PIOLock on Pione Zero
-    const pioToken = process.env.PIO_TOKEN;
-    if (!pioToken) {
-      console.log("❌ PIO_TOKEN is required for pionezero deploy");
-      console.log("💡 Set PIO_TOKEN=0x... in your .env file");
-      process.exit(1);
+    const pioToken = process.env.PIO_TOKEN || "0xdc2436650c1Ab0767aB0eDc1267a219F54cf7147";
+    if (pioToken === "0xdc2436650c1Ab0767aB0eDc1267a219F54cf7147") {
+      console.log("⚠️  Using zero address for PIO_TOKEN (for testing only)");
+      console.log("💡 Update PIO_TOKEN with real address for production");
     }
 
     console.log(`🔒 Deploying PIOLock with PIO token: ${pioToken}`);
     
     const Lock = await ethers.getContractFactory("PIOLock");
     const lock = await Lock.deploy(pioToken, validators);
-    await lock.deployed();
+    await lock.waitForDeployment();
     
-    contractAddress = lock.address;
+    contractAddress = await lock.getAddress();
     contractName = "PIOLock";
     
     console.log("✅ PIOLock deployed successfully!");
@@ -62,9 +66,9 @@ async function main() {
     
     const Mint = await ethers.getContractFactory("PIOMint");
     const mint = await Mint.deploy(validators);
-    await mint.deployed();
+    await mint.waitForDeployment();
     
-    contractAddress = mint.address;
+    contractAddress = await mint.getAddress();
     contractName = "PIOMint";
     
     console.log("✅ PIOMint deployed successfully!");

@@ -30,66 +30,52 @@ export default function ValidatorPanel() {
         Validator Panel
       </div>
       
-      <div style={{ 
-        padding: '12px 16px', 
-        background: '#F59E0B20',
-        border: '1px solid #F59E0B',
-        borderRadius: '8px',
-        marginBottom: 20
-      }}>
-        <div style={{ fontWeight: 600, color: '#F59E0B' }}>🔐 Validator Only</div>
+      <div className="status-alert warning">
+        <div>🔐 Validator Only</div>
         <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>
           Chỉ validators mới có thể approve mint
         </div>
       </div>
 
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>Lock ID</label>
+      <div className="form-group">
+        <label className="form-label">Lock ID</label>
         <input 
+          className="form-input"
           placeholder="0x..." 
           value={lockId} 
           onChange={e => setLockId(e.target.value)}
-          style={{ width: '100%', padding: '12px', fontSize: 16 }}
         />
       </div>
 
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>Địa chỉ nhận</label>
+      <div className="form-group">
+        <label className="form-label">Địa chỉ nhận</label>
         <input 
+          className="form-input"
           placeholder="0x..." 
           value={to} 
           onChange={e => setTo(e.target.value)}
-          style={{ width: '100%', padding: '12px', fontSize: 16 }}
         />
       </div>
 
-      <div style={{ marginBottom: 20 }}>
-        <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>Số lượng wPZO</label>
+      <div className="form-group">
+        <label className="form-label">Số lượng wPZO</label>
         <input 
+          className="form-input"
           placeholder="0.0" 
           value={amount} 
           onChange={e => setAmount(e.target.value)}
-          style={{ width: '100%', padding: '12px', fontSize: 16 }}
         />
       </div>
 
       <button 
-        className="action" 
+        className="form-button" 
         onClick={handleApproveMint}
         disabled={isProcessing}
-        style={{
-          width: '100%',
-          padding: '16px',
-          fontSize: 16,
-          fontWeight: 600,
-          opacity: isProcessing ? 0.5 : 1,
-          cursor: isProcessing ? 'not-allowed' : 'pointer'
-        }}
       >
         {isProcessing ? 'Đang xử lý...' : 'Approve Mint'}
       </button>
 
-      <div style={{ fontSize: 12, opacity: 0.7, marginTop: 12, textAlign: 'center' }}>
+      <div className="form-info">
         Cần 3/5 validators approve để mint wPZO
       </div>
     </div>
