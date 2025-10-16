@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { formatEther } from 'viem'
 import { useBridge } from '../../hooks/useBridge'
 import TransactionStatus from '../../components/TransactionStatus'
+import AISecurityMonitor from '../../components/AISecurityMonitor'
 
 export default function Bridge(){
   const {
@@ -48,16 +49,10 @@ export default function Bridge(){
         </div>
         
         {/* Connection Status */}
-        <div style={{ 
-          padding: '12px 16px', 
-          background: isConnected ? '#10B98120' : '#EF444420',
-          border: `1px solid ${isConnected ? '#10B981' : '#EF4444'}`,
-          borderRadius: '8px',
-          marginBottom: 20
-        }}>
+        <div className={`status-alert ${isConnected ? 'success' : 'error'}`}>
           {isConnected ? (
             <div>
-              <div style={{ fontWeight: 600, color: '#10B981' }}>✅ Đã kết nối ví</div>
+              <div>✅ Đã kết nối ví</div>
               <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>
                 {address?.slice(0, 6)}...{address?.slice(-4)} | Chain: {chainId === 5080 ? 'Pione Zero' : 'Goerli'}
               </div>
@@ -68,37 +63,29 @@ export default function Bridge(){
               )}
             </div>
           ) : (
-            <div style={{ color: '#EF4444' }}>❌ Chưa kết nối ví</div>
+            <div>❌ Chưa kết nối ví</div>
           )}
         </div>
 
         {/* Amount Input */}
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>Số lượng PZO</label>
+        <div className="form-group">
+          <label className="form-label">Số lượng PZO</label>
           <input 
+            className="form-input"
             placeholder="0.0" 
             value={amount} 
             onChange={e => setAmount(e.target.value)}
-            style={{ width: '100%', padding: '12px', fontSize: 16 }}
           />
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <div className="quick-amounts">
             {quickAmounts.map(ratio => (
               <button
                 key={ratio}
+                className="quick-amount-btn"
                 onClick={() => {
                   if (balance) {
                     const maxAmount = parseFloat(formatEther(balance.value))
                     setAmount((maxAmount * ratio).toFixed(4))
                   }
-                }}
-                style={{
-                  padding: '6px 12px',
-                  background: '#374151',
-                  border: '1px solid #4B5563',
-                  borderRadius: '6px',
-                  color: 'white',
-                  fontSize: 12,
-                  cursor: 'pointer'
                 }}
               >
                 {ratio * 100}%
@@ -108,31 +95,21 @@ export default function Bridge(){
         </div>
 
         {/* Destination Address */}
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>Địa chỉ đích (Goerli)</label>
+        <div className="form-group">
+          <label className="form-label">Địa chỉ đích (Goerli)</label>
           <input 
+            className="form-input"
             placeholder="0x..." 
             value={destination} 
             onChange={e => setDestination(e.target.value)}
-            style={{ width: '100%', padding: '12px', fontSize: 16 }}
           />
         </div>
 
         {/* Bridge Button */}
         <button 
-          className="action" 
+          className="form-button" 
           onClick={onBridge}
           disabled={isProcessing || !isConnected}
-          style={{
-            width: '100%',
-            padding: '16px',
-            fontSize: 16,
-            fontWeight: 600,
-            opacity: isProcessing || !isConnected ? 0.5 : 1,
-            cursor: isProcessing || !isConnected ? 'not-allowed' : 'pointer',
-            position: 'relative',
-            overflow: 'hidden'
-          }}
         >
           {isProcessing ? (
             <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
@@ -149,15 +126,21 @@ export default function Bridge(){
           ) : 'Bridge PZO'}
         </button>
 
-        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 12, textAlign: 'center' }}>
+        <div className="form-info">
           Multisig 3/5 | Timelock 24h | AI Security
         </div>
         
         {/* Contract Info */}
-        <div style={{ fontSize: 10, opacity: 0.5, marginTop: 8, textAlign: 'center' }}>
+        <div className="contract-info">
           PIOLock: {PIOLock_ADDRESS?.slice(0, 6)}...{PIOLock_ADDRESS?.slice(-4)} | 
           PIOMint: {PIOMint_ADDRESS?.slice(0, 6)}...{PIOMint_ADDRESS?.slice(-4)}
         </div>
+
+        {/* AI Security Monitor */}
+        <AISecurityMonitor 
+          transactions={transactions} 
+          isActive={isConnected && transactions.length > 0}
+        />
       </div>
 
       {/* Transaction History */}

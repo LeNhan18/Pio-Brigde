@@ -3,6 +3,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit'
 import CosmicScene from './components/CosmicScene'
 import Bridge from './features/bridge/Bridge'
 import ValidatorPanel from './components/ValidatorPanel'
+import AIAssistant from './components/AIAssistant'
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('bridge')
@@ -108,6 +109,9 @@ export default function App() {
           }}
         />
       ))}
+
+      {/* AI Assistant */}
+      <AIAssistant />
     </div>
   )
 }
