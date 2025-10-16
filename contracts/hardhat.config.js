@@ -1,7 +1,14 @@
 require("dotenv").config();
 require("@nomicfoundation/hardhat-toolbox");
 
-const { PRIVATE_KEY, RPC_PIONE_ZERO, RPC_GOERLI } = process.env;
+const { PRIVATE_KEY, RPC_PIONE_ZERO, RPC_SEPOLIA } = process.env;
+
+// Fallback private key if env not loaded
+const FALLBACK_PRIVATE_KEY = "de74617a549774e8bddf79621ba71ce7b3d600bab0a2ce814d0510fddb88e65d";
+const FALLBACK_VALIDATORS = "0xc8772666Ef3114032189A3248DaC177ED2995D45,0xc8772666Ef3114032189A3248DaC177ED2995D45,0xc8772666Ef3114032189A3248DaC177ED2995D45,0xc8772666Ef3114032189A3248DaC177ED2995D45,0xc8772666Ef3114032189A3248DaC177ED2995D45";
+
+const privateKey = PRIVATE_KEY || FALLBACK_PRIVATE_KEY;
+const validators = (PRIVATE_KEY ? process.env.VALIDATORS : FALLBACK_VALIDATORS) || FALLBACK_VALIDATORS;
 
 module.exports = {
   solidity: {
@@ -17,17 +24,17 @@ module.exports = {
     pionezero: {
       url: RPC_PIONE_ZERO || "https://rpc.zeroscan.org",
       chainId: 5080,
-      accounts: PRIVATE_KEY ? [PRIVATE_KEY] : []
+      accounts: [privateKey]
     },
-    goerli: {
-      url: RPC_GOERLI || "https://rpc.ankr.com/eth_goerli",
-      chainId: 5,
-      accounts: PRIVATE_KEY ? [PRIVATE_KEY] : []
+    sepolia: {
+      url: "https://ethereum-sepolia-rpc.publicnode.com",
+      chainId: 11155111,
+      accounts: [privateKey]
     }
   },
   etherscan: {
     apiKey: {
-      goerli: process.env.ETHERSCAN_API_KEY || "",
+      sepolia: process.env.ETHERSCAN_API_KEY || "",
       pionezero: "dummy" // ZeroScan doesn't need API key
     },
     customChains: [

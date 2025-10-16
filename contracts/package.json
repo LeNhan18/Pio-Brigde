@@ -6,16 +6,32 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
-    "deploy:goerli": "hardhat run scripts/deploy-testnet.js --network goerli",
+    "deploy:sepolia": "hardhat run scripts/deploy-testnet.js --network sepolia",
     "deploy:pionezero": "hardhat run scripts/deploy-testnet.js --network pionezero",
-    "verify:goerli": "hardhat verify --network goerli",
+    "deploy:pio-token": "hardhat run scripts/deploy-pio-token.js --network pionezero",
+    "verify:sepolia": "hardhat verify --network sepolia",
     "verify:pionezero": "hardhat verify --network pionezero"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",
+    "@nomicfoundation/hardhat-ethers": "^3.1.0",
+    "@nomicfoundation/hardhat-ignition-ethers": "^0.15.14",
+    "@nomicfoundation/hardhat-network-helpers": "^1.1.0",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.1.1",
     "@openzeppelin/contracts": "^4.9.6",
+    "@typechain/ethers-v6": "^0.5.1",
+    "@typechain/hardhat": "^9.1.0",
+    "@types/chai": "^4.3.20",
+    "@types/mocha": "^10.0.10",
+    "chai": "^4.5.0",
     "dotenv": "^16.4.5",
-    "ethers": "^5.7.2",
-    "hardhat": "^2.22.10"
+    "ethers": "^6.14.0",
+    "hardhat": "^2.22.10",
+    "hardhat-gas-reporter": "^1.0.10",
+    "solidity-coverage": "^0.8.16",
+    "ts-node": "^10.9.2",
+    "typechain": "^8.3.2",
+    "typescript": "^5.9.3"
   }
 }

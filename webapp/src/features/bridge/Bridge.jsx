@@ -3,6 +3,7 @@ import { formatEther } from 'viem'
 import { useBridge } from '../../hooks/useBridge'
 import TransactionStatus from '../../components/TransactionStatus'
 import AISecurityMonitor from '../../components/AISecurityMonitor'
+import NetworkStatus from '../../components/NetworkStatus'
 
 export default function Bridge(){
   const {
@@ -48,13 +49,16 @@ export default function Bridge(){
           PZO → wPZO Bridge
         </div>
         
+        {/* Network Status */}
+        <NetworkStatus />
+
         {/* Connection Status */}
-        <div className={`status-alert ${isConnected ? 'success' : 'error'}`}>
-          {isConnected ? (
+        {isConnected && (
+          <div className="status-alert success" style={{ marginTop: '12px' }}>
             <div>
               <div>✅ Đã kết nối ví</div>
               <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>
-                {address?.slice(0, 6)}...{address?.slice(-4)} | Chain: {chainId === 5080 ? 'Pione Zero' : 'Goerli'}
+                {address?.slice(0, 6)}...{address?.slice(-4)}
               </div>
               {balance && (
                 <div style={{ fontSize: 12, opacity: 0.8, marginTop: 2 }}>
@@ -62,10 +66,8 @@ export default function Bridge(){
                 </div>
               )}
             </div>
-          ) : (
-            <div>❌ Chưa kết nối ví</div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Amount Input */}
         <div className="form-group">
