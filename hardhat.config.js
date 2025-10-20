@@ -15,7 +15,7 @@ module.exports = {
       chainId: 31337
     },
     pionezero: {
-      url: RPC_PIONE_ZERO || "https://rpc.pioneer-zero.invalid", // điền RPC thực tế
+      url: RPC_PIONE_ZERO || "https://rpc.zeroscan.org", // RPC thực tế của Pione Zero
       chainId: 5080,
       accounts: PRIVATE_KEY ? [PRIVATE_KEY] : []
     },

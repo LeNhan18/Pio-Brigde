@@ -22,7 +22,9 @@ export const pioneZero = {
 
 export const chains = [goerli, pioneZero]
 
-export const wagmiConfig = createConfig({
+export const wagmiConfig = getDefaultConfig({
+  appName: 'PIO Bridge',
+  projectId: 'YOUR_PROJECT_ID', // Có thể để trống cho test
   chains,
   transports: {
     [goerli.id]: http(import.meta.env.VITE_GOERLI_RPC || 'https://rpc.ankr.com/eth_goerli'),
