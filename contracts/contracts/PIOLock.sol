@@ -3,13 +3,16 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 /**
  * @title PIOLock (Pione Zero Chain)
  * @notice Hợp đồng khóa PIO để bridge sang Goerli. Hỗ trợ multisig (3/5),
  *         timelock 24h cho phép người gửi hoàn tiền (rollback) nếu chưa finalize.
  */
-contract PIOLock {
+contract PIOLock is Pausable, Ownable, ReentrancyGuard {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     IERC20 public immutable pioToken;
@@ -56,6 +59,7 @@ contract PIOLock {
         require(pioTokenAddress != address(0), "PIO token required");
         require(validators.length == 5, "need 5 validators");
         pioToken = IERC20(pioTokenAddress);
+        _transferOwnership(msg.sender);
         for (uint256 i = 0; i < validators.length; i++) {
             require(validators[i] != address(0), "invalid validator");
             bool added = validatorSet.add(validators[i]);
@@ -76,7 +80,7 @@ contract PIOLock {
      * @param amount Số lượng PIO
      * @param destination Địa chỉ nhận wPIO bên Goerli
      */
-    function lock(uint256 amount, address destination) external returns (bytes32 lockId) {
+    function lock(uint256 amount, address destination) external whenNotPaused nonReentrant returns (bytes32 lockId) {
         require(amount > 0, "amount = 0");
         require(destination != address(0), "bad dest");
 
@@ -124,7 +128,7 @@ contract PIOLock {
     /**
      * @notice Sau 24h nếu chưa finalize, người gửi có thể rollback và nhận lại PIO.
      */
-    function rollback(bytes32 lockId) external {
+    function rollback(bytes32 lockId) external nonReentrant {
         LockInfo storage info = locks[lockId];
         require(info.timestamp != 0, "unknown");
         require(!info.finalized, "finalized");
@@ -136,6 +140,44 @@ contract PIOLock {
         bool ok = pioToken.transfer(info.sender, info.amount);
         require(ok, "refund failed");
         emit Refunded(lockId, info.sender, info.amount);
+    }
+
+    /**
+     * @notice Emergency functions - chỉ owner
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
+    /**
+     * @notice Emergency withdraw - chỉ owner, chỉ khi pause
+     */
+    function emergencyWithdraw(address token, uint256 amount) external onlyOwner whenPaused {
+        require(token != address(0), "invalid token");
+        IERC20(token).transfer(owner(), amount);
+    }
+
+    /**
+     * @notice Thêm validator mới - chỉ owner
+     */
+    function addValidator(address validator) external onlyOwner {
+        require(validator != address(0), "invalid validator");
+        require(validatorSet.length() < 10, "too many validators"); // Giới hạn tối đa
+        bool added = validatorSet.add(validator);
+        require(added, "validator exists");
+    }
+
+    /**
+     * @notice Xóa validator - chỉ owner
+     */
+    function removeValidator(address validator) external onlyOwner {
+        require(validatorSet.length() > 3, "need at least 3 validators"); // Giữ tối thiểu 3
+        bool removed = validatorSet.remove(validator);
+        require(removed, "validator not found");
     }
 }
 
