@@ -1,6 +1,6 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit'
 import { http, createConfig } from 'wagmi'
-import { goerli } from 'wagmi/chains'
+import { sepolia } from 'wagmi/chains'
 import { Buffer } from 'buffer'
 
 // Polyfill for buffer
@@ -20,14 +20,14 @@ export const pioneZero = {
   blockExplorers: { default: { name: 'ZeroScan', url: 'https://zeroscan.org' } },
 }
 
-export const chains = [goerli, pioneZero]
+export const chains = [sepolia, pioneZero]
 
 export const wagmiConfig = getDefaultConfig({
   appName: 'PIO Bridge',
   projectId: 'YOUR_PROJECT_ID', // Có thể để trống cho test
   chains,
   transports: {
-    [goerli.id]: http(import.meta.env.VITE_GOERLI_RPC || 'https://rpc.ankr.com/eth_goerli'),
+    [sepolia.id]: http(import.meta.env.VITE_SEPOLIA_RPC || 'https://rpc.ankr.com/eth_sepolia'),
     [pioneZero.id]: http(import.meta.env.VITE_PIONEZERO_RPC || 'https://rpc.zeroscan.org'),
   },
   ssr: false,

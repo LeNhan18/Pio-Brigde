@@ -143,6 +143,26 @@ input:focus{
   background:rgba(255,255,255,0.08);
   transform:translateY(-1px);
 }
+
+/* Bridge Modern Card */
+.bridge-wrap{display:flex;gap:24px;max-width:1200px;width:100%}
+.bridge-card{display:flex;flex-direction:column;gap:16px}
+.bridge-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.network-chip{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.35);box-shadow:0 0 0 4px rgba(124,58,237,0.08) inset;color:#C4B5FD;font-weight:700;letter-spacing:.3px}
+.network-dot{width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--cyan));box-shadow:0 0 10px var(--shadow-purple)}
+.link-btn{padding:8px 12px;border-radius:10px;background:rgba(34,211,238,0.12);border:1px solid rgba(34,211,238,0.35);color:#67E8F9;cursor:pointer;transition:var(--transition-smooth)}
+.link-btn:hover{transform:translateY(-2px);box-shadow:0 10px 24px var(--shadow-cyan)}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat-item{padding:10px 12px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid var(--glass-border);display:flex;flex-direction:column;gap:2px}
+.stat-label{font-size:11px;opacity:.7}
+.stat-value{font-size:13px;font-weight:700;color:#E9D5FF}
+.divider{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);margin:6px 0}
+.helper{font-size:12px;opacity:.7;text-align:center;margin-top:8px}
+
+@media (max-width: 900px){
+  .bridge-wrap{flex-direction:column}
+  .stat-grid{grid-template-columns:1fr 1fr}
+}
 button.action{
   padding:18px 24px;
   background:linear-gradient(135deg,var(--purple),var(--cyan));

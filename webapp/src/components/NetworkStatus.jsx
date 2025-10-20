@@ -16,12 +16,12 @@ export default function NetworkStatus() {
           color: '#7C3AED',
           status: 'connected'
         }
-      case 5:
+      case 11155111: // Sepolia
         return {
-          name: 'Goerli',
+          name: 'Sepolia',
           symbol: 'ETH',
-          explorer: 'https://goerli.etherscan.io',
-          faucet: 'https://goerlifaucet.com',
+          explorer: 'https://sepolia.etherscan.io',
+          faucet: 'https://sepoliafaucet.com',
           color: '#22D3EE',
           status: 'connected'
         }
