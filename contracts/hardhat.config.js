@@ -26,9 +26,9 @@ module.exports = {
       chainId: 5080,
       accounts: [privateKey]
     },
-    sepolia: {
-      url: "https://ethereum-sepolia-rpc.publicnode.com",
-      chainId: 11155111,
+    mumbai: {
+      url: "https://rpc-mumbai.maticvigil.com",
+      chainId: 80001,
       accounts: [privateKey]
     }
   },
