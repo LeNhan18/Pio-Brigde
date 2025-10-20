@@ -60,8 +60,8 @@ async function main() {
     
     console.log("✅ PIOLock deployed successfully!");
     
-  } else if (name === "goerli") {
-    // Deploy PIOMint on Goerli
+  } else if (name === "mumbai") {
+    // Deploy PIOMint on Mumbai
     console.log("🪙 Deploying PIOMint...");
     
     const Mint = await ethers.getContractFactory("PIOMint");
@@ -75,7 +75,7 @@ async function main() {
     
   } else {
     console.log("❌ Unsupported network for deployment");
-    console.log("💡 Supported networks: pionezero, goerli");
+    console.log("💡 Supported networks: pionezero, sepolia");
     process.exit(1);
   }
 
