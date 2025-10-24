@@ -1,5 +1,6 @@
 import React from 'react'
 import { useChainId, useAccount } from 'wagmi'
+import AddNetworkButton from './AddNetworkButton'
 
 export default function NetworkStatus() {
   const chainId = useChainId()
@@ -16,18 +17,18 @@ export default function NetworkStatus() {
           color: '#7C3AED',
           status: 'connected'
         }
-      case 11155111: // Sepolia
+      case 11155111: // Ethereum Sepolia
         return {
-          name: 'Sepolia',
+          name: 'Ethereum Sepolia',
           symbol: 'ETH',
           explorer: 'https://sepolia.etherscan.io',
-          faucet: 'https://sepoliafaucet.com',
-          color: '#22D3EE',
+          faucet: 'https://sepoliafaucet.io',
+          color: '#627EEA',
           status: 'connected'
         }
       default:
         return {
-          name: 'Unknown Network',
+          name: 'Unsupported Network',
           symbol: '?',
           explorer: null,
           faucet: null,
@@ -55,11 +56,30 @@ export default function NetworkStatus() {
     )
   }
 
+  if (network.status === 'unsupported') {
+    return (
+      <div style={{
+        padding: '12px',
+        background: 'rgba(239, 68, 68, 0.1)',
+        border: '1px solid rgba(239, 68, 68, 0.3)',
+        borderRadius: '8px',
+        fontSize: '12px',
+        color: '#EF4444',
+        textAlign: 'center'
+      }}>
+        <div style={{ marginBottom: '8px' }}>
+          ⚠️ Mạng không được hỗ trợ (Chain ID: {chainId})
+        </div>
+         <AddNetworkButton chainId={11155111} />
+      </div>
+    )
+  }
+
   return (
     <div style={{
       padding: '8px 12px',
-      background: `rgba(${network.color === '#7C3AED' ? '124, 58, 237' : '34, 211, 238'}, 0.1)`,
-      border: `1px solid rgba(${network.color === '#7C3AED' ? '124, 58, 237' : '34, 211, 238'}, 0.3)`,
+      background: `rgba(${network.color === '#7C3AED' ? '124, 58, 237' : '98, 126, 234'}, 0.1)`,
+      border: `1px solid rgba(${network.color === '#7C3AED' ? '124, 58, 237' : '98, 126, 234'}, 0.3)`,
       borderRadius: '8px',
       fontSize: '12px',
       color: network.color,
@@ -90,16 +110,16 @@ export default function NetworkStatus() {
             textDecoration: 'none',
             fontSize: '10px',
             padding: '2px 6px',
-            background: `rgba(${network.color === '#7C3AED' ? '124, 58, 237' : '34, 211, 238'}, 0.2)`,
+             background: `rgba(${network.color === '#7C3AED' ? '124, 58, 237' : '98, 126, 234'}, 0.2)`,
             borderRadius: '4px',
             transition: 'all 0.2s ease'
           }}
-          onMouseEnter={(e) => {
-            e.target.style.background = `rgba(${network.color === '#7C3AED' ? '124, 58, 237' : '34, 211, 238'}, 0.3)`
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.background = `rgba(${network.color === '#7C3AED' ? '124, 58, 237' : '34, 211, 238'}, 0.2)`
-          }}
+           onMouseEnter={(e) => {
+             e.target.style.background = `rgba(${network.color === '#7C3AED' ? '124, 58, 237' : '98, 126, 234'}, 0.3)`
+           }}
+           onMouseLeave={(e) => {
+             e.target.style.background = `rgba(${network.color === '#7C3AED' ? '124, 58, 237' : '98, 126, 234'}, 0.2)`
+           }}
         >
           Faucet
         </a>

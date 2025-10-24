@@ -26,9 +26,9 @@ module.exports = {
       chainId: 5080,
       accounts: [privateKey]
     },
-    mumbai: {
-      url: "https://rpc-mumbai.maticvigil.com",
-      chainId: 80001,
+    sepolia: {
+      url: RPC_SEPOLIA || "https://sepolia.gateway.tenderly.co",
+      chainId: 11155111,
       accounts: [privateKey]
     }
   },

@@ -17,7 +17,7 @@ contract PIOLock is Pausable, Ownable, ReentrancyGuard {
 
     IERC20 public immutable pioToken;
 
-    uint256 public constant DEST_CHAIN_ID = 5; // Goerli
+    uint256 public constant DEST_CHAIN_ID = 11155111; // Sepolia
     uint256 public constant TIMELOCK_SECONDS = 24 hours;
 
     // Bộ validator multisig
