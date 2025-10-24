@@ -35,18 +35,22 @@ export default function Bridge(){
   const onViewExplorer = (hash) => {
     const explorerUrl = chainId === 5080 
       ? `https://zeroscan.org/tx/${hash}`
-      : `https://goerli.etherscan.io/tx/${hash}`
+      : `https://sepolia.etherscan.io/tx/${hash}`
     window.open(explorerUrl, '_blank')
   }
 
   const quickAmounts = [0.25, 0.5, 0.75, 1.0]
 
   return (
-    <div style={{ display: 'flex', gap: '24px', maxWidth: '1200px', width: '100%' }}>
+    <div className="bridge-wrap">
       {/* Bridge Form */}
-      <div className="panel" style={{ flex: 1, minWidth: 400 }}>
-        <div style={{ fontWeight: 700, marginBottom: 20, fontSize: 24 }}>
-          PZO → wPZO Bridge
+      <div className="panel bridge-card" style={{ flex: 1, minWidth: 400 }}>
+        <div className="bridge-header">
+          <div style={{fontWeight:800,fontSize:24,letterSpacing:.3}}>PZO → wPZO Bridge</div>
+          <div style={{display:'flex',gap:8}}>
+            <div className="network-chip"><span className="network-dot"/>Pione Zero (5080)</div>
+            <button className="link-btn" onClick={()=>window.open('https://faucet.zeroscan.org','_blank')}>Faucet</button>
+          </div>
         </div>
         
         {/* Network Status */}
@@ -54,18 +58,15 @@ export default function Bridge(){
 
         {/* Connection Status */}
         {isConnected && (
-          <div className="status-alert success" style={{ marginTop: '12px' }}>
-            <div>
-              <div>✅ Đã kết nối ví</div>
-              <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>
-                {address?.slice(0, 6)}...{address?.slice(-4)}
-              </div>
-              {balance && (
-                <div style={{ fontSize: 12, opacity: 0.8, marginTop: 2 }}>
-                  Balance: {parseFloat(formatEther(balance.value)).toFixed(4)} {balance.symbol}
-                </div>
-              )}
+          <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ fontSize: 12, opacity: 0.8 }}>
+              {address?.slice(0, 6)}...{address?.slice(-4)}
             </div>
+            {balance && (
+              <div style={{ fontSize: 12, opacity: 0.8, marginTop: 2 }}>
+                Balance: {parseFloat(formatEther(balance.value)).toFixed(4)} {balance.symbol}
+              </div>
+            )}
           </div>
         )}
 
@@ -98,7 +99,7 @@ export default function Bridge(){
 
         {/* Destination Address */}
         <div className="form-group">
-          <label className="form-label">Địa chỉ đích (Goerli)</label>
+          <label className="form-label">Địa chỉ đích (Sepolia)</label>
           <input 
             className="form-input"
             placeholder="0x..." 
@@ -128,9 +129,13 @@ export default function Bridge(){
           ) : 'Bridge PZO'}
         </button>
 
-        <div className="form-info">
-          Multisig 3/5 | Timelock 24h | AI Security
+        <div className="stat-grid">
+          <div className="stat-item"><span className="stat-label">Security</span><span className="stat-value">Multisig 3/5</span></div>
+          <div className="stat-item"><span className="stat-label">Safety</span><span className="stat-value">Timelock 24h</span></div>
+          <div className="stat-item"><span className="stat-label">AI</span><span className="stat-value">Realtime Monitor</span></div>
         </div>
+        <div className="divider"/>
+        <div className="helper">Giao dịch testnet • Không dùng cho tài sản thật</div>
 
         {/* Testnet Info */}
         <div style={{
@@ -147,8 +152,8 @@ export default function Bridge(){
           </div>
           <div>
             • Pione Zero: Chain ID 5080<br/>
-            • Goerli: Chain ID 5<br/>
-            • Faucet: <a href="https://faucet.zeroscan.org" target="_blank" style={{ color: '#22D3EE' }}>Get PZO</a> | <a href="https://goerlifaucet.com" target="_blank" style={{ color: '#22D3EE' }}>Get ETH</a>
+            • Sepolia: Chain ID 11155111<br/>
+            • Faucet: <a href="https://faucet.zeroscan.org" target="_blank" style={{ color: '#22D3EE' }}>Get PZO</a> | <a href="https://sepoliafaucet.com" target="_blank" style={{ color: '#22D3EE' }}>Get ETH</a>
           </div>
         </div>
         
@@ -166,7 +171,7 @@ export default function Bridge(){
       </div>
 
       {/* Transaction History */}
-      <div className="panel" style={{ flex: 1, minWidth: 400 }}>
+      <div className="panel bridge-card" style={{ flex: 1, minWidth: 400 }}>
         <div style={{ fontWeight: 700, marginBottom: 20, fontSize: 20 }}>
           Lịch sử giao dịch
         </div>

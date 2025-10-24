@@ -44,27 +44,14 @@ export default function App() {
       <CosmicScene />
       <header className="topbar">
         <div className="brand">PIO Bridge</div>
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
+        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+          <div className="tab-container">
             <button
               onClick={(e) => {
                 setActiveTab('bridge')
                 createParticleTrail(e)
               }}
-              style={{
-                padding: '10px 20px',
-                background: activeTab === 'bridge' ? 'linear-gradient(135deg, #7C3AED, #22D3EE)' : 'transparent',
-                border: 'none',
-                borderRadius: '8px',
-                color: 'white',
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                boxShadow: activeTab === 'bridge' ? '0 4px 12px rgba(124, 58, 237, 0.3)' : 'none',
-                position: 'relative',
-                overflow: 'hidden'
-              }}
+              className={`tab-button ${activeTab === 'bridge' ? 'active' : ''}`}
             >
               Bridge
             </button>
@@ -73,29 +60,20 @@ export default function App() {
                 setActiveTab('validator')
                 createParticleTrail(e)
               }}
-              style={{
-                padding: '10px 20px',
-                background: activeTab === 'validator' ? 'linear-gradient(135deg, #7C3AED, #22D3EE)' : 'transparent',
-                border: 'none',
-                borderRadius: '8px',
-                color: 'white',
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                boxShadow: activeTab === 'validator' ? '0 4px 12px rgba(124, 58, 237, 0.3)' : 'none',
-                position: 'relative',
-                overflow: 'hidden'
-              }}
+              className={`tab-button ${activeTab === 'validator' ? 'active' : ''}`}
             >
               Validator
             </button>
           </div>
-          <ConnectButton />
+          <div className="connect-button-wrapper">
+            <ConnectButton />
+          </div>
         </div>
       </header>
       <main className="content">
-        {activeTab === 'bridge' ? <Bridge /> : <ValidatorPanel />}
+        <div className="page-transition">
+          {activeTab === 'bridge' ? <Bridge /> : <ValidatorPanel />}
+        </div>
       </main>
       
       {/* Particle Trail Effects */}
