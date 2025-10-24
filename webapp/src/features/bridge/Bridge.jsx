@@ -111,6 +111,28 @@ export default function Bridge(){
     window.open(explorerUrl, '_blank')
   }
 
+  const onRetryTransaction = async (transaction) => {
+    try {
+      console.log('🔄 Retrying transaction:', transaction)
+      
+      // Extract amount from transaction
+      const amount = parseFloat(transaction.amount.replace(' PZO', ''))
+      
+      if (!amount || amount <= 0) {
+        alert('Không thể lấy số lượng từ transaction cũ')
+        return
+      }
+      
+      // Retry the bridge with same parameters
+      await bridgePZO(amount, transaction.destination)
+      
+      console.log('✅ Retry transaction submitted')
+    } catch (error) {
+      console.error('❌ Retry failed:', error)
+      alert(`Retry thất bại: ${error.message}`)
+    }
+  }
+
   const quickAmounts = [0.25, 0.5, 0.75, 1.0]
 
   const destinationNetworks = [
@@ -352,6 +374,27 @@ export default function Bridge(){
           <div className="stat-item"><span className="stat-label">Safety</span><span className="stat-value">Timelock 24h</span></div>
           <div className="stat-item"><span className="stat-label">AI</span><span className="stat-value">Realtime Monitor</span></div>
         </div>
+        
+        {/* Bridge Process Explanation */}
+        <div style={{ 
+          background: 'rgba(59, 130, 246, 0.1)', 
+          border: '1px solid rgba(59, 130, 246, 0.3)', 
+          borderRadius: '8px', 
+          padding: '12px', 
+          marginTop: '16px',
+          fontSize: '12px',
+          lineHeight: '1.4'
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: '8px', color: '#3B82F6' }}>
+            🔄 Cơ chế Bridge hoạt động:
+          </div>
+          <div style={{ marginBottom: '4px' }}>
+            <span style={{ color: '#F59E0B' }}>👤 Gửi (Lock):</span> Bạn ký trong MetaMask → PZO bị khóa
+          </div>
+          <div>
+            <span style={{ color: '#10B981' }}>🤖 Nhận (Mint):</span> Validator tự động mint wPZO → MetaMask KHÔNG bật
+          </div>
+        </div>
         <div className="divider"/>
        
         {/* Contract Info */}
@@ -384,6 +427,7 @@ export default function Bridge(){
                 key={index} 
                 transaction={tx} 
                 onViewExplorer={onViewExplorer}
+                onRetry={onRetryTransaction}
               />
             ))}
           </div>

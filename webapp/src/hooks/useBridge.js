@@ -221,7 +221,19 @@ export function useBridge() {
 
     } catch (error) {
       console.error('❌ Bridge error:', error)
-      throw new Error('Bridge failed: ' + error.message)
+      
+      // Handle specific error types with better user feedback
+      if (error.message.includes('User rejected')) {
+        throw new Error('Giao dịch đã bị hủy bởi người dùng')
+      } else if (error.message.includes('insufficient funds')) {
+        throw new Error('Không đủ số dư để thực hiện giao dịch')
+      } else if (error.message.includes('gas')) {
+        throw new Error('Lỗi gas - vui lòng thử lại với gas limit cao hơn')
+      } else if (error.message.includes('revert')) {
+        throw new Error('Smart contract lỗi - vui lòng kiểm tra lại thông tin')
+      } else {
+        throw new Error('Bridge failed: ' + error.message)
+      }
     } finally {
       setIsProcessing(false)
     }
@@ -276,11 +288,11 @@ export function useBridge() {
     }
   }, [lockHash, pendingTransaction, transactions])
 
-  // Fallback: Add transaction to history if pending for too long without hash
+  // Real-time transaction monitoring with better fallback
   useEffect(() => {
     if (pendingTransaction && !lockHash) {
       const timeout = setTimeout(() => {
-        console.log('⏰ Creating fallback transaction hash')
+        console.log('⏰ Creating fallback transaction hash for monitoring')
         const fallbackHash = `0x${Math.random().toString(16).substr(2, 40)}`
         const tx = {
           hash: fallbackHash,
@@ -292,19 +304,73 @@ export function useBridge() {
         }
         setTransactions(prev => [tx, ...prev])
         setPendingTransaction(null)
-      }, 5000) // Wait 5 seconds for real hash
+        
+        // Start monitoring this transaction
+        monitorTransaction(fallbackHash)
+      }, 3000) // Reduced to 3 seconds for faster response
 
       return () => clearTimeout(timeout)
     }
   }, [pendingTransaction, lockHash])
 
-  // Update transaction status
+  // Real-time transaction monitoring function
+  const monitorTransaction = async (txHash) => {
+    if (!txHash || txHash === '0x...') return
+    
+    console.log('🔍 Starting transaction monitoring for:', txHash)
+    
+    let attempts = 0
+    const maxAttempts = 60 // Monitor for 1 minute
+    
+    const monitorInterval = setInterval(async () => {
+      attempts++
+      console.log(`🔍 Monitoring attempt ${attempts}/${maxAttempts} for ${txHash}`)
+      
+      try {
+        // Check if transaction is confirmed
+        if (isLockReceiptSuccess && lockHash === txHash) {
+          console.log('✅ Transaction confirmed via receipt')
+          setTransactions(prev => prev.map(tx => 
+            tx.hash === txHash ? { ...tx, status: 'confirmed' } : tx
+          ))
+          clearInterval(monitorInterval)
+          return
+        }
+        
+        // Check if transaction failed
+        if (lockError && lockHash === txHash) {
+          console.log('❌ Transaction failed via error')
+          setTransactions(prev => prev.map(tx => 
+            tx.hash === txHash ? { ...tx, status: 'failed' } : tx
+          ))
+          clearInterval(monitorInterval)
+          return
+        }
+        
+        // Timeout after max attempts
+        if (attempts >= maxAttempts) {
+          console.log('⏰ Transaction monitoring timeout')
+          setTransactions(prev => prev.map(tx => 
+            tx.hash === txHash ? { ...tx, status: 'timeout' } : tx
+          ))
+          clearInterval(monitorInterval)
+          return
+        }
+        
+      } catch (error) {
+        console.error('❌ Monitoring error:', error)
+      }
+    }, 1000) // Check every second
+  }
+
+  // Update transaction status with better error handling
   useEffect(() => {
     if (isLockReceiptSuccess && lockHash) {
       setTransactions(prev => prev.map(tx => 
         tx.hash === lockHash ? { ...tx, status: 'confirmed' } : tx
       ))
       refetchBalance()
+      console.log('✅ Lock transaction confirmed:', lockHash)
     }
   }, [isLockReceiptSuccess, lockHash, refetchBalance])
 
@@ -314,8 +380,28 @@ export function useBridge() {
         tx.hash === mintHash ? { ...tx, status: 'minted' } : tx
       ))
       refetchBalance()
+      console.log('✅ Mint transaction confirmed:', mintHash)
     }
   }, [isMintReceiptSuccess, mintHash, refetchBalance])
+
+  // Handle transaction failures
+  useEffect(() => {
+    if (lockError) {
+      console.error('❌ Lock transaction failed:', lockError)
+      setTransactions(prev => prev.map(tx => 
+        tx.hash === lockHash ? { ...tx, status: 'failed' } : tx
+      ))
+    }
+  }, [lockError, lockHash])
+
+  useEffect(() => {
+    if (mintError) {
+      console.error('❌ Mint transaction failed:', mintError)
+      setTransactions(prev => prev.map(tx => 
+        tx.hash === mintHash ? { ...tx, status: 'failed' } : tx
+      ))
+    }
+  }, [mintError, mintHash])
 
   return {
     // State
