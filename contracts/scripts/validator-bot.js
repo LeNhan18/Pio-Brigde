@@ -1,6 +1,10 @@
 const { ethers } = require('hardhat')
 const fs = require('fs')
 const path = require('path')
+const dotenv = require('dotenv')
+
+// Load environment variables
+dotenv.config({ path: path.join(__dirname, '../validator.env') })
 
 // Configuration
 const CONFIG = {
@@ -8,14 +12,12 @@ const CONFIG = {
   PIONE_ZERO: {
     rpc: process.env.RPC_PIONE_ZERO || 'https://rpc.pione.tech',
     chainId: 5080,
-    lockContract: process.env.PIOLOCK_ADDRESS,
-    lockABI: require('../artifacts/contracts/PIOLock.sol/PIOLock.json').abi
+    lockContract: process.env.PIOLOCK_ADDRESS
   },
   SEPOLIA: {
     rpc: process.env.RPC_SEPOLIA || 'https://ethereum-sepolia-rpc.publicnode.com',
     chainId: 11155111,
-    mintContract: process.env.PIOMINT_ADDRESS,
-    mintABI: require('../artifacts/contracts/PIOMint.sol/PIOMint.json').abi
+    mintContract: process.env.PIOMINT_ADDRESS
   },
   
   // Validator configuration
@@ -57,15 +59,21 @@ class ValidatorBot {
       this.sepoliaProvider = new ethers.JsonRpcProvider(CONFIG.SEPOLIA.rpc)
       
       // Initialize contracts
+      console.log('📋 Loading contract ABIs...')
+      
+      // Load PIOLock ABI
+      const lockABI = require('../artifacts/contracts/PIOLock.sol/PIOLock.json').abi
       this.lockContract = new ethers.Contract(
         CONFIG.PIONE_ZERO.lockContract,
-        CONFIG.PIONE_ZERO.lockABI,
+        lockABI,
         this.pioneProvider
       )
       
+      // Load PIOMint ABI
+      const mintABI = require('../artifacts/contracts/PIOMint.sol/PIOMint.json').abi
       this.mintContract = new ethers.Contract(
         CONFIG.SEPOLIA.mintContract,
-        CONFIG.SEPOLIA.mintABI,
+        mintABI,
         this.sepoliaProvider
       )
       
@@ -228,6 +236,72 @@ class ValidatorBot {
     
     // Write to log file
     fs.appendFileSync(CONFIG.LOG_FILE, logMessage + '\n')
+  }
+
+  // Enhanced security monitoring
+  async verifyTransactionIntegrity(txHash) {
+    try {
+      // Get transaction details
+      const tx = await this.pioneProvider.getTransaction(txHash)
+      const receipt = await this.pioneProvider.getTransactionReceipt(txHash)
+      
+      if (!tx || !receipt) {
+        throw new Error('Transaction not found')
+      }
+      
+      // Security checks
+      if (receipt.status !== 1) {
+        throw new Error('Transaction failed')
+      }
+      
+      // Check for suspicious patterns
+      if (tx.value > ethers.parseEther('1000')) {
+        this.logSecurityAlert('LARGE_VALUE', { txHash, value: tx.value.toString() })
+      }
+      
+      // Verify gas usage is reasonable
+      const gasUsed = receipt.gasUsed
+      const gasLimit = tx.gasLimit
+      const gasUsageRatio = Number(gasUsed) / Number(gasLimit)
+      
+      if (gasUsageRatio > 0.95) {
+        this.logSecurityAlert('HIGH_GAS_USAGE', { txHash, ratio: gasUsageRatio })
+      }
+      
+      console.log('✅ Transaction integrity verified:', txHash)
+      
+    } catch (error) {
+      console.error('❌ Transaction integrity check failed:', error)
+      this.logSecurityAlert('INTEGRITY_CHECK_FAILED', { txHash, error: error.message })
+    }
+  }
+
+  // Security alert logging
+  logSecurityAlert(alertType, data) {
+    const timestamp = new Date().toISOString()
+    const alert = {
+      timestamp,
+      type: alertType,
+      data,
+      severity: this.getAlertSeverity(alertType)
+    }
+    
+    console.warn(`🚨 SECURITY ALERT [${alert.severity}]:`, alert)
+    
+    // Log to file
+    fs.appendFileSync('security-alerts.log', JSON.stringify(alert) + '\n')
+  }
+
+  getAlertSeverity(alertType) {
+    const severityMap = {
+      'MONITORING_ERROR': 'LOW',
+      'LARGE_VALUE': 'MEDIUM',
+      'HIGH_GAS_USAGE': 'MEDIUM',
+      'INTEGRITY_CHECK_FAILED': 'HIGH',
+      'RAPID_APPROVALS': 'HIGH',
+      'UNUSUAL_AMOUNT': 'MEDIUM'
+    }
+    return severityMap[alertType] || 'LOW'
   }
 }
 

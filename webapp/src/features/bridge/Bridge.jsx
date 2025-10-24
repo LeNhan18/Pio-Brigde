@@ -6,6 +6,7 @@ import AISecurityMonitor from '../../components/AISecurityMonitor'
 import NetworkStatus from '../../components/NetworkStatus'
 import ContractStatus from '../../components/ContractStatus'
 import DebugInfo from '../../components/DebugInfo'
+import SecurityDashboard from '../../components/SecurityDashboard'
 
 export default function Bridge(){
   const {
@@ -407,6 +408,18 @@ export default function Bridge(){
         <AISecurityMonitor 
           transactions={transactions} 
           isActive={isConnected && transactions.length > 0}
+        />
+
+        {/* Security Dashboard */}
+        <SecurityDashboard 
+          transactions={transactions}
+          validators={[
+            { address: '0x167bdc31866eE7a4BfACCb22f42712729bC19212', approvalCount: 0 },
+            { address: '0xf46Ada76EE5952F9E7306123d88442092F62D630', approvalCount: 0 },
+            { address: '0x8918f188F18c6F50B548fdF753EF3cA80E34d355', approvalCount: 0 },
+            { address: '0x449FD950c2F417784e1b99A0EB80822DeA7E2e49', approvalCount: 0 },
+            { address: '0x39a89C61baDae6cbE8db23d09a58D03Ffeeb4cac', approvalCount: 0 }
+          ]}
         />
       </div>
 

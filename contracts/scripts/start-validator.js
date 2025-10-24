@@ -5,7 +5,15 @@ const dotenv = require('dotenv')
 const path = require('path')
 
 // Load environment variables
-dotenv.config({ path: path.join(__dirname, '../validator.env') })
+const envPath = path.join(__dirname, '../validator.env')
+console.log('📁 Loading environment from:', envPath)
+dotenv.config({ path: envPath })
+
+// Debug environment variables
+console.log('🔍 Environment check:')
+console.log('PIOLOCK_ADDRESS:', process.env.PIOLOCK_ADDRESS)
+console.log('PIOMINT_ADDRESS:', process.env.PIOMINT_ADDRESS)
+console.log('VALIDATOR_1_PRIVATE_KEY:', process.env.VALIDATOR_1_PRIVATE_KEY ? 'Set' : 'Not set')
 
 // Validate required environment variables
 const requiredVars = [
