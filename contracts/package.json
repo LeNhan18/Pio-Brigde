@@ -6,11 +6,17 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
-    "deploy:mumbai": "hardhat run scripts/deploy-testnet.js --network mumbai",
+    "deploy:sepolia": "hardhat run scripts/deploy-testnet.js --network sepolia",
     "deploy:pionezero": "hardhat run scripts/deploy-testnet.js --network pionezero",
     "deploy:pio-token": "hardhat run scripts/deploy-pio-token.js --network pionezero",
     "verify:sepolia": "hardhat verify --network sepolia",
-    "verify:pionezero": "hardhat verify --network pionezero"
+    "verify:pionezero": "hardhat verify --network pionezero",
+    "validator:start": "node scripts/start-validator.js",
+    "validator:test": "node scripts/validator-bot.js",
+    "test:lock": "node scripts/check-lock-status.js",
+    "test:mint": "node scripts/check-mint-status.js",
+    "test:validators": "node scripts/check-validator-balances.js",
+    "test:all": "npm run test:lock && npm run test:mint && npm run test:validators"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",

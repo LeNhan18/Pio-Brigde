@@ -1,5 +1,5 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit'
-import { http, createConfig } from 'wagmi'
+import { http } from 'wagmi'
 import { sepolia } from 'wagmi/chains'
 import { Buffer } from 'buffer'
 
@@ -18,6 +18,7 @@ export const pioneZero = {
     public: { http: [import.meta.env.VITE_PIONEZERO_RPC || 'https://rpc.zeroscan.org'] },
   },
   blockExplorers: { default: { name: 'ZeroScan', url: 'https://zeroscan.org' } },
+  testnet: true,
 }
 
 export const chains = [sepolia, pioneZero]
@@ -27,10 +28,15 @@ export const wagmiConfig = getDefaultConfig({
   projectId: 'YOUR_PROJECT_ID', // Có thể để trống cho test
   chains,
   transports: {
-    [sepolia.id]: http(import.meta.env.VITE_SEPOLIA_RPC || 'https://rpc.ankr.com/eth_sepolia'),
+    [sepolia.id]: http(import.meta.env.VITE_SEPOLIA_RPC || 'https://ethereum-sepolia.blockpi.network/v1/rpc/public'),
     [pioneZero.id]: http(import.meta.env.VITE_PIONEZERO_RPC || 'https://rpc.zeroscan.org'),
   },
   ssr: false,
+  batch: {
+    multicall: {
+      wait: 16,
+    },
+  },
 })
 
 

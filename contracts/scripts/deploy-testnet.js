@@ -4,12 +4,12 @@ const hre = require("hardhat");
 async function main() {
   const { ethers, network } = hre;
   const name = network.name;
-  console.log(`🚀 Deploying to ${name} testnet...`);
+  console.log(` Deploying to ${name} testnet...`);
 
   // Get deployer account
   const signers = await ethers.getSigners();
   if (signers.length === 0) {
-    console.log("❌ No signers found. Check your private key in .env file");
+    console.log(" No signers found. Check your private key in .env file");
     process.exit(1);
   }
   const deployer = signers[0];
@@ -60,8 +60,8 @@ async function main() {
     
     console.log("✅ PIOLock deployed successfully!");
     
-  } else if (name === "mumbai") {
-    // Deploy PIOMint on Mumbai
+  } else if (name === "sepolia" || name === "hardhat") {
+    // Deploy PIOMint on Mumbai, Sepolia, or Hardhat
     console.log("🪙 Deploying PIOMint...");
     
     const Mint = await ethers.getContractFactory("PIOMint");
@@ -75,7 +75,7 @@ async function main() {
     
   } else {
     console.log("❌ Unsupported network for deployment");
-    console.log("💡 Supported networks: pionezero, sepolia");
+    console.log("💡 Supported networks: pionezero, sepolia, hardhat");
     process.exit(1);
   }
 

@@ -16,16 +16,29 @@ contract PIOMint is ERC20, Pausable, Ownable, ReentrancyGuard {
 
     EnumerableSet.AddressSet private validatorSet;
     uint256 public constant VALIDATOR_THRESHOLD = 3; // 3/5
+    uint256 public constant TIMELOCK_DURATION = 24 hours; // 24h timelock
+    uint256 public constant MAX_MINT_AMOUNT = 1000000 * 10**18; // 1M wPIO max per transaction
 
     // lockId đã xử lý -> true
     mapping(bytes32 => bool) public processed;
     // approvals
     mapping(bytes32 => mapping(address => bool)) public approvals;
     mapping(bytes32 => uint256) public approvalCount;
+    
+    // Timelock mechanism
+    mapping(bytes32 => uint256) public timelocks;
+    mapping(bytes32 => bool) public timelockExecuted;
+    
+    // Security features
+    mapping(address => uint256) public validatorLastApproval;
+    uint256 public constant COOLDOWN_PERIOD = 1 hours; // 1h cooldown between approvals
 
     event MintRequested(bytes32 indexed lockId, address indexed to, uint256 amount);
     event MintApproved(bytes32 indexed lockId, address indexed validator, uint256 approvals);
     event Minted(bytes32 indexed lockId, address indexed to, uint256 amount);
+    event TimelockSet(bytes32 indexed lockId, uint256 timestamp);
+    event TimelockExecuted(bytes32 indexed lockId);
+    event SecurityAlert(bytes32 indexed lockId, string reason);
 
     constructor(address[] memory validators) ERC20("Wrapped PIO", "wPIO") {
         require(validators.length == 5, "need 5 validators");
@@ -64,16 +77,78 @@ contract PIOMint is ERC20, Pausable, Ownable, ReentrancyGuard {
         require(!processed[lockId], "processed");
         require(to != address(0), "bad to");
         require(amount > 0, "amount=0");
+        require(amount <= MAX_MINT_AMOUNT, "amount too large");
+        
+        // Security: Cooldown period between approvals
+        require(
+            block.timestamp >= validatorLastApproval[msg.sender] + COOLDOWN_PERIOD,
+            "cooldown period"
+        );
+        
+        // Security: Check for suspicious patterns
+        _checkSecurityPatterns(lockId, to, amount);
 
         require(!approvals[lockId][msg.sender], "approved");
         approvals[lockId][msg.sender] = true;
         approvalCount[lockId] += 1;
+        validatorLastApproval[msg.sender] = block.timestamp;
+        
         emit MintApproved(lockId, msg.sender, approvalCount[lockId]);
 
         if (approvalCount[lockId] >= VALIDATOR_THRESHOLD) {
+            // Set timelock for critical operations
+            if (amount > 10000 * 10**18) { // 10K wPIO threshold
+                timelocks[lockId] = block.timestamp;
+                emit TimelockSet(lockId, block.timestamp);
+                return;
+            }
+            
             processed[lockId] = true;
             _mint(to, amount);
             emit Minted(lockId, to, amount);
+        }
+    }
+
+    /**
+     * @notice Execute timelocked mint after 24h delay
+     */
+    function executeTimelockedMint(bytes32 lockId, address to, uint256 amount) external {
+        require(timelocks[lockId] > 0, "no timelock");
+        require(!timelockExecuted[lockId], "already executed");
+        require(
+            block.timestamp >= timelocks[lockId] + TIMELOCK_DURATION,
+            "timelock not expired"
+        );
+        require(approvalCount[lockId] >= VALIDATOR_THRESHOLD, "insufficient approvals");
+        
+        timelockExecuted[lockId] = true;
+        processed[lockId] = true;
+        _mint(to, amount);
+        emit Minted(lockId, to, amount);
+        emit TimelockExecuted(lockId);
+    }
+    
+    /**
+     * @notice Security pattern detection
+     */
+    function _checkSecurityPatterns(bytes32 lockId, address to, uint256 amount) internal {
+        // Check for rapid successive approvals (potential attack)
+        uint256 recentApprovals = 0;
+        for (uint256 i = 0; i < validatorSet.length(); i++) {
+            address validator = validatorSet.at(i);
+            if (approvals[lockId][validator] && 
+                block.timestamp - validatorLastApproval[validator] < 300) { // 5 minutes
+                recentApprovals++;
+            }
+        }
+        
+        if (recentApprovals > 2) {
+            emit SecurityAlert(lockId, "Rapid successive approvals detected");
+        }
+        
+        // Check for unusual amounts
+        if (amount > 50000 * 10**18) { // 50K wPIO
+            emit SecurityAlert(lockId, "Unusually large amount");
         }
     }
 

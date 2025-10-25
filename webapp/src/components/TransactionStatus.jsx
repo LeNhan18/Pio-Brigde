@@ -13,20 +13,22 @@ export default function TransactionStatus({ transaction, onViewExplorer }) {
 
   const getStatusText = (status) => {
     switch (status) {
-      case 'pending': return 'Đang chờ xác nhận'
-      case 'confirmed': return 'Đã khóa PZO'
-      case 'minted': return 'Đã mint wPZO'
+      case 'pending': return 'Đang chờ xác nhận (User ký)'
+      case 'confirmed': return 'Đã khóa PZO (Chờ Validator)'
+      case 'minted': return 'Đã mint wPZO (Tự động)'
       case 'failed': return 'Thất bại'
+      case 'timeout': return 'Hết thời gian chờ'
       default: return 'Không xác định'
     }
   }
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'pending': return '⏳'
-      case 'confirmed': return '🔒'
-      case 'minted': return '✅'
+      case 'pending': return '👤' // User action
+      case 'confirmed': return '🔒' // Locked, waiting for validator
+      case 'minted': return '🤖' // Auto-minted by backend
       case 'failed': return '❌'
+      case 'timeout': return '⏰'
       default: return '❓'
     }
   }
@@ -66,27 +68,53 @@ export default function TransactionStatus({ transaction, onViewExplorer }) {
           </div>
         </div>
         
-        <button
-          onClick={() => onViewExplorer(transaction.hash)}
-          style={{
-            padding: '4px 8px',
-            background: '#374151',
-            border: '1px solid #4B5563',
-            borderRadius: '4px',
-            color: 'white',
-            fontSize: '11px',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-          onMouseOver={(e) => {
-            e.target.style.background = '#4B5563'
-          }}
-          onMouseOut={(e) => {
-            e.target.style.background = '#374151'
-          }}
-        >
-          View
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => onViewExplorer(transaction.hash)}
+            style={{
+              padding: '4px 8px',
+              background: '#374151',
+              border: '1px solid #4B5563',
+              borderRadius: '4px',
+              color: 'white',
+              fontSize: '11px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.background = '#4B5563'
+            }}
+            onMouseOut={(e) => {
+              e.target.style.background = '#374151'
+            }}
+          >
+            View
+          </button>
+          
+          {(transaction.status === 'failed' || transaction.status === 'timeout') && (
+            <button
+              onClick={() => onRetry && onRetry(transaction)}
+              style={{
+                padding: '4px 8px',
+                background: '#10B981',
+                border: '1px solid #059669',
+                borderRadius: '4px',
+                color: 'white',
+                fontSize: '11px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = '#059669'
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = '#10B981'
+              }}
+            >
+              Retry
+            </button>
+          )}
+        </div>
       </div>
       
       <div style={{ fontSize: '11px', opacity: 0.5 }}>
