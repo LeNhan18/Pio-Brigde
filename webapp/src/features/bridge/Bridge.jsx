@@ -72,10 +72,6 @@ export default function Bridge(){
         return
       }
       
-      console.log('🚀 Starting bridge transaction...')
-      console.log('Amount:', amount)
-      console.log('Destination:', destination)
-      
       // Real bridge transaction
       const result = await bridgePZO(amount, destination)
       
@@ -101,7 +97,7 @@ export default function Bridge(){
         errorMessage = 'Mạng không được hỗ trợ. Vui lòng chuyển sang Pione Zero!'
       }
       
-      alert(`❌ Lỗi: ${errorMessage}`)
+      alert(` Lỗi: ${errorMessage}`)
     }
   }
 
@@ -349,6 +345,7 @@ export default function Bridge(){
            </div>
          </div>
 
+
         {/* Bridge Button */}
         <button 
           className="form-button" 
@@ -387,7 +384,7 @@ export default function Bridge(){
           lineHeight: '1.4'
         }}>
           <div style={{ fontWeight: 600, marginBottom: '8px', color: '#3B82F6' }}>
-            🔄 Cơ chế Bridge hoạt động:
+             Cơ chế Bridge hoạt động:
           </div>
           <div style={{ marginBottom: '4px' }}>
             <span style={{ color: '#F59E0B' }}>👤 Gửi (Lock):</span> Bạn ký trong MetaMask → PZO bị khóa

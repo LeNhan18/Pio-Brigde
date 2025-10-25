@@ -1,100 +1,23 @@
 import { useState, useEffect } from 'react'
-import { useAccount, useBalance, useChainId, useSwitchChain, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import { useAccount, useBalance, useChainId, useSwitchChain, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
 import { parseEther, formatEther } from 'viem'
-
+import { getPublicClient } from '@wagmi/core'
+import PIOMintArtifact_ABI from '../ABI/PIOMint.json'
+import PIOLockArtifact_ABI from '../ABI/PIOLock.json'
+import PIOSimple from '../ABI/SimplePIO.json'
 // ERC20 ABI for token approval
-const ERC20_ABI = [
-  {
-    "inputs": [
-      {"name": "spender", "type": "address"},
-      {"name": "amount", "type": "uint256"}
-    ],
-    "name": "approve",
-    "outputs": [{"name": "", "type": "bool"}],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {"name": "owner", "type": "address"},
-      {"name": "spender", "type": "address"}
-    ],
-    "name": "allowance",
-    "outputs": [{"name": "", "type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
-  }
-]
-
+const ERC20_ABI = PIOSimple.abi;
 // Contract ABIs (simplified for demo)
-const PIOLock_ABI = [
-  {
-    "inputs": [
-      {"name": "amount", "type": "uint256"},
-      {"name": "destination", "type": "address"}
-    ],
-    "name": "lock",
-    "outputs": [{"name": "lockId", "type": "bytes32"}],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [{"name": "lockId", "type": "bytes32"}],
-    "name": "approveLock",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [{"name": "lockId", "type": "bytes32"}],
-    "name": "rollback",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {"indexed": true, "name": "lockId", "type": "bytes32"},
-      {"indexed": true, "name": "sender", "type": "address"},
-      {"indexed": true, "name": "destination", "type": "address"},
-      {"indexed": false, "name": "amount", "type": "uint256"},
-      {"indexed": false, "name": "destChainId", "type": "uint256"},
-      {"indexed": false, "name": "timestamp", "type": "uint256"}
-    ],
-    "name": "Locked",
-    "type": "event"
-  }
-]
+const PIOLock_ABI = PIOLockArtifact_ABI.abi;
 
-const PIOMint_ABI = [
-  {
-    "inputs": [
-      {"name": "lockId", "type": "bytes32"},
-      {"name": "to", "type": "address"},
-      {"name": "amount", "type": "uint256"}
-    ],
-    "name": "approveMint",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {"indexed": true, "name": "lockId", "type": "bytes32"},
-      {"indexed": true, "name": "to", "type": "address"},
-      {"indexed": false, "name": "amount", "type": "uint256"}
-    ],
-    "name": "Minted",
-    "type": "event"
-  }
-]
+const PIOMint_ABI = PIOMintArtifact_ABI.abi;
+// Check if running locally
+const isLocal = import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
 
 // Contract addresses (update with deployed addresses)
-const PIOLock_ADDRESS = import.meta.env.VITE_PIOLOCK_ADDRESS || '0x...'
-const PIOMint_ADDRESS = import.meta.env.VITE_PIOMINT_ADDRESS || '0x...'
-const PIO_TOKEN_ADDRESS = import.meta.env.VITE_PIO_TOKEN_ADDRESS || '0xdc2436650c1Ab0767aB0eDc1267a219F54cf7147' // Default PIO token address
+const PIOLock_ADDRESS = import.meta.env.VITE_PIOLOCK_ADDRESS 
+const PIOMint_ADDRESS = import.meta.env.VITE_PIOMINT_ADDRESS 
+const PIO_TOKEN_ADDRESS = import.meta.env.VITE_PIO_TOKEN_ADDRESS 
 
 export function useBridge() {
   const { address, isConnected } = useAccount()
@@ -110,12 +33,27 @@ export function useBridge() {
     chainId: chainId,
   })
 
+  // Check allowance (skip if local)
+  const { data: allowance } = useReadContract({
+    address: PIO_TOKEN_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: 'allowance',
+    args: [address, PIOLock_ADDRESS],
+    query: {
+      enabled: !isLocal && !!address && !!PIO_TOKEN_ADDRESS && !!PIOLock_ADDRESS
+    }
+  })
+
   // Write contract hooks
   const { writeContract: writeApprove, data: approveHash, isPending: isApprovePending, isSuccess: isApproveSuccess, error: approveError } = useWriteContract()
   const { writeContract: writeLock, data: lockHash, isPending: isLockPending, isSuccess: isLockSuccess, error: lockError } = useWriteContract()
   const { writeContract: writeMint, data: mintHash, isPending: isMintPending, isSuccess: isMintSuccess, error: mintError } = useWriteContract()
 
   // Wait for transaction receipts
+  const { isLoading: isApproveConfirming, isSuccess: isApproveReceiptSuccess } = useWaitForTransactionReceipt({
+    hash: approveHash,
+  })
+
   const { isLoading: isLockConfirming, isSuccess: isLockReceiptSuccess } = useWaitForTransactionReceipt({
     hash: lockHash,
   })
@@ -130,8 +68,10 @@ export function useBridge() {
     if (!amount || Number(amount) <= 0) throw new Error('Nhập số lượng hợp lệ')
     if (!destination) throw new Error('Nhập địa chỉ đích')
 
+  
+
     // Check contract addresses
-    if (PIOLock_ADDRESS === '0x...' || !PIOLock_ADDRESS) {
+    if (!PIOLock_ADDRESS) {
       throw new Error('Contract chưa được deploy. Vui lòng deploy contracts trước!')
     }
 
@@ -143,84 +83,182 @@ export function useBridge() {
         return
       }
 
-      console.log('🔒 Starting bridge transaction...')
-      console.log('Contract address:', PIOLock_ADDRESS)
-      console.log('PIO Token address:', PIO_TOKEN_ADDRESS)
-      console.log('Amount:', amount)
-      console.log('Destination:', destination)
-
-      // Step 1: Approve PIO token first
-      console.log('📝 Step 1: Approving PIO token...')
-      console.log('PIO Token Address:', PIO_TOKEN_ADDRESS)
-      console.log('PIOLock Address:', PIOLock_ADDRESS)
-      console.log('Amount to approve:', parseEther(amount.toString()).toString())
-      
-      try {
-        const approveResult = await writeApprove({
-          address: PIO_TOKEN_ADDRESS,
-          abi: ERC20_ABI,
-          functionName: 'approve',
-          args: [PIOLock_ADDRESS, parseEther(amount.toString())],
-        })
-        console.log('✅ PIO token approval submitted:', approveResult)
-      } catch (approveError) {
-        console.error('❌ Approve error:', approveError)
-        throw new Error(`Token approval failed: ${approveError.message}`)
+      if (!isLocal) {
+        console.log('🔒 Starting bridge transaction...')
+        console.log('Contract address:', PIOLock_ADDRESS)
+        console.log('PIO Token address:', PIO_TOKEN_ADDRESS)
+        console.log('Amount:', amount)
+        console.log('Destination:', destination)
       }
 
-      // Step 2: Wait for approval to be confirmed
-      console.log('⏳ Waiting for approval confirmation...')
-      
-      // Wait for approval transaction to be confirmed
-      let approvalConfirmed = false
-      let attempts = 0
-      const maxAttempts = 30 // 30 seconds timeout
-      
-      while (!approvalConfirmed && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
-        attempts++
+      // Step 1: Check PIO token allowance first (skip if local)
+      if (!isLocal) {
+        console.log(' Step 1: Checking PIO token allowance...')
+        console.log('PIO Token Address:', PIO_TOKEN_ADDRESS)
+        console.log('PIOLock Address:', PIOLock_ADDRESS)
+        console.log('Amount to approve:', parseEther(amount.toString()).toString())
         
-        console.log(`⏳ Checking approval status... (${attempts}/${maxAttempts})`)
-        
-        // Check if approval was successful
-        if (isApproveSuccess) {
-          approvalConfirmed = true
-          console.log('✅ Approval confirmed!')
-          break
+        try {
+          // Always approve PIO token (simpler approach)
+          console.log('📝 Approving PIO token...')
+          console.log('📊 Approving to:', PIOLock_ADDRESS)
+          console.log('📊 Token address:', PIO_TOKEN_ADDRESS)
+          console.log('📊 Amount to approve:', parseEther(amount.toString()).toString())
+          
+          const requiredAmount = parseEther(amount.toString())
+          
+          const approveResult = await writeApprove({
+            address: PIO_TOKEN_ADDRESS,
+            abi: ERC20_ABI,
+            functionName: 'approve',
+            args: [PIOLock_ADDRESS, requiredAmount],
+          })
+          
+          console.log('✅ PIO token approval submitted:', approveResult)
+          
+          if (!approveResult) {
+            throw new Error('Approval transaction không được submit thành công')
+          }
+        } catch (approveError) {
+          console.error('❌ Approve error:', approveError)
+          console.error('❌ Approve error details:', {
+            message: approveError.message,
+            code: approveError.code,
+            data: approveError.data
+          })
+          throw new Error(`Token approval failed: ${approveError.message}`)
         }
-      }
-      
-      if (!approvalConfirmed) {
-        console.warn('⚠️ Approval timeout, proceeding anyway...')
+      } else {
+        console.log('🏠 Local mode - skipping approval process')
       }
 
-      // Step 3: Call PIOLock.lock()
-      console.log('📝 Step 2: Calling lock function...')
-      try {
-        const result = await writeLock({
-          address: PIOLock_ADDRESS,
-          abi: PIOLock_ABI,
-          functionName: 'lock',
-          args: [parseEther(amount.toString()), destination],
+      // Step 2: Wait for approval to be confirmed (skip if local)
+      if (!isLocal) {
+        console.log(' Waiting for approval confirmation...')
+        console.log(' Approval hash:', approveHash)
+        console.log(' Approval success:', isApproveSuccess)
+        console.log(' Approval pending:', isApprovePending)
+        
+        // Wait for approval transaction to be confirmed
+        let approvalConfirmed = false
+        let attempts = 0
+        const maxAttempts = 30 // 30 seconds timeout
+        
+        while (!approvalConfirmed && attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
+          attempts++
+          
+          console.log(` Checking approval status... (${attempts}/${maxAttempts})`)
+          console.log(` Current approval state: success=${isApproveSuccess}, pending=${isApprovePending}, hash=${approveHash}`)
+          
+          // Check if approval was successful
+          if ((isApproveSuccess || isApproveReceiptSuccess) && approveHash) {
+            approvalConfirmed = true
+            console.log(' Approval confirmed! Hash:', approveHash)
+            break
+          }
+          
+          // Check for approval errors
+          if (approveError) {
+            console.error(' Approval error detected:', approveError)
+            throw new Error(`Approval failed: ${approveError.message}`)
+          }
+        }
+        
+        if (!approvalConfirmed) {
+          console.error(' Approval failed or timeout!')
+          console.log(' Final approval state:', { success: isApproveSuccess, hash: approveHash, pending: isApprovePending })
+          console.log(' Approval error:', approveError)
+          throw new Error('Approval transaction thất bại hoặc timeout. Vui lòng thử lại.')
+        }
+      } else {
+        console.log(' Local mode - skipping approval confirmation')
+      }
+
+      // Step 3: Call PIOLock.lock() (skip if local)
+      if (!isLocal) {
+        console.log(' Step 2: Calling lock function...')
+        console.log('Amount:', amount)
+        console.log('Destination:', destination)
+        console.log('Parsed amount:', parseEther(amount.toString()).toString())
+        
+        // Debug: Check contract state before calling
+        console.log(' Checking contract state...')
+        console.log(' PIOLock Address:', PIOLock_ADDRESS)
+        console.log(' PIO Token Address:', PIO_TOKEN_ADDRESS)
+        console.log(' User Address:', address)
+        console.log('Amount to lock:', parseEther(amount.toString()).toString())
+        
+        // Validate contract addresses
+        if (!PIOLock_ADDRESS || PIOLock_ADDRESS === '0x...') {
+          throw new Error('PIOLock contract address không hợp lệ')
+        }
+        
+        if (!PIO_TOKEN_ADDRESS || PIO_TOKEN_ADDRESS === '0x...') {
+          throw new Error('PIO Token address không hợp lệ')
+        }
+        
+        console.log('🔍 Contract validation passed, checking allowance...')
+        
+        // Check current allowance
+        const requiredAmount = parseEther(amount.toString())
+        console.log('Required amount:', requiredAmount.toString())
+        console.log('Current allowance:', allowance?.toString() || '0')
+        
+        if (!allowance || BigInt(allowance.toString()) < requiredAmount) {
+          console.error('Insufficient allowance!')
+          console.log(' Current allowance:', allowance?.toString() || '0')
+          console.log(' Required amount:', requiredAmount.toString())
+          throw new Error(`Allowance không đủ (${allowance?.toString() || '0'} < ${requiredAmount.toString()}). Vui lòng approve tokens trước.`)
+        }
+        
+        console.log('🔍 Allowance check passed, calling lock function...')
+        
+        try {
+          const result = await writeLock({
+            address: PIOLock_ADDRESS,
+            abi: PIOLock_ABI,
+            functionName: 'lock',
+            args: [parseEther(amount.toString()), destination],
+          })
+
+          console.log('🔗 writeLock result:', result)
+          
+          if (!result) {
+            console.error('❌ writeLock returned undefined - contract call may have failed')
+            throw new Error('Contract call không trả về transaction hash. Có thể do gas limit thấp hoặc contract lỗi.')
+          }
+          
+          console.log(' Lock transaction submitted successfully:', result)
+        } catch (writeError) {
+          console.error(' writeLock error:', writeError)
+          console.error(' Error details:', {
+            message: writeError.message,
+            code: writeError.code,
+            data: writeError.data
+          })
+          throw new Error(`Contract call failed: ${writeError.message}`)
+        }
+      } else {
+        console.log('🏠 Local mode - skipping lock function call')
+      }
+      
+      // Store pending transaction info with validation
+      if (amount && destination) {
+        setPendingTransaction({
+          amount: amount.toString(),
+          destination: destination.toString(),
+          timestamp: Date.now()
         })
-
-        console.log('🔗 writeLock result:', result)
-      } catch (writeError) {
-        console.error('❌ writeLock error:', writeError)
-        throw new Error(`Contract call failed: ${writeError.message}`)
+        console.log('💾 Stored pending transaction:', { amount, destination })
+      } else {
+        console.warn('⚠️ Cannot store pending transaction - missing data:', { amount, destination })
       }
-      
-      // Store pending transaction info
-      setPendingTransaction({
-        amount: amount,
-        destination: destination,
-        timestamp: Date.now()
-      })
       
       return 'pending'
 
     } catch (error) {
-      console.error('❌ Bridge error:', error)
+      console.error(' Bridge error:', error)
       
       // Handle specific error types with better user feedback
       if (error.message.includes('User rejected')) {
@@ -255,7 +293,7 @@ export function useBridge() {
 
   // Add approve transaction to history when hash becomes available
   useEffect(() => {
-    if (approveHash && !transactions.find(tx => tx.hash === approveHash)) {
+    if (approveHash && typeof approveHash === 'string' && approveHash !== '0x...' && !transactions.find(tx => tx.hash === approveHash)) {
       console.log('✅ Adding approve transaction to history:', approveHash)
       const tx = {
         hash: approveHash,
@@ -271,9 +309,29 @@ export function useBridge() {
 
   // Add lock transaction to history when hash becomes available
   useEffect(() => {
-    console.log('🔍 Checking for new lock transaction hash:', { lockHash, pendingTransaction, hasExisting: transactions.find(tx => tx.hash === lockHash) })
+    // Skip processing in local mode - handled by fallback useEffect
+    if (isLocal) return
+
+    // Check if both lockHash and pendingTransaction are valid
+    const isValidLockHash = lockHash && typeof lockHash === 'string' && lockHash !== '0x...'
+    const isValidPendingTransaction = pendingTransaction && 
+      typeof pendingTransaction === 'object' && 
+      pendingTransaction.amount !== undefined && 
+      pendingTransaction.destination !== undefined && 
+      pendingTransaction.timestamp !== undefined
+
+    // Only log when there's actually something to process
+    if (isValidLockHash || isValidPendingTransaction) {
+      console.log('🔍 Checking for new lock transaction hash:', { 
+        lockHash: lockHash || 'undefined', 
+        pendingTransaction: pendingTransaction || 'null', 
+        isValidLockHash,
+        isValidPendingTransaction,
+        hasExisting: isValidLockHash ? transactions.find(tx => tx.hash === lockHash) : false
+      })
+    }
     
-    if (lockHash && pendingTransaction && !transactions.find(tx => tx.hash === lockHash)) {
+    if (isValidLockHash && isValidPendingTransaction && !transactions.find(tx => tx.hash === lockHash)) {
       console.log('✅ Adding lock transaction to history:', lockHash)
       const tx = {
         hash: lockHash,
@@ -290,10 +348,42 @@ export function useBridge() {
 
   // Real-time transaction monitoring with better fallback
   useEffect(() => {
-    if (pendingTransaction && !lockHash) {
+    // Handle local mode immediately
+    if (isLocal && pendingTransaction) {
       const timeout = setTimeout(() => {
-        console.log('⏰ Creating fallback transaction hash for monitoring')
-        const fallbackHash = `0x${Math.random().toString(16).substr(2, 40)}`
+        console.log('🏠 Local mode - creating mock successful transaction')
+        const mockHash = `0xlocal${Math.random().toString(16).substr(2, 60)}` // Mock hash for local
+        const tx = {
+          hash: mockHash,
+          amount: pendingTransaction.amount,
+          destination: pendingTransaction.destination,
+          timestamp: pendingTransaction.timestamp,
+          status: 'confirmed', // Mark as confirmed immediately in local mode
+          type: 'lock'
+        }
+        setTransactions(prev => [tx, ...prev])
+        setPendingTransaction(null)
+      }, 500) // Faster response for local mode (0.5 seconds)
+
+      return () => clearTimeout(timeout)
+    }
+
+    // Skip if local mode but no pending transaction
+    if (isLocal) return
+
+    // Check if pendingTransaction is valid and lockHash is not available
+    const isValidPendingTransaction = pendingTransaction && 
+      typeof pendingTransaction === 'object' && 
+      pendingTransaction.amount !== undefined && 
+      pendingTransaction.destination !== undefined && 
+      pendingTransaction.timestamp !== undefined
+    
+    const hasNoLockHash = !lockHash || lockHash === '0x...'
+    
+    if (isValidPendingTransaction && hasNoLockHash) {
+      const timeout = setTimeout(() => {
+        console.log('⏱️ Creating fallback transaction hash for monitoring')
+        const fallbackHash = `0x${Math.random().toString(16).substr(2, 64)}` // Generate a proper 64-char hash
         const tx = {
           hash: fallbackHash,
           amount: pendingTransaction.amount,
@@ -307,7 +397,7 @@ export function useBridge() {
         
         // Start monitoring this transaction
         monitorTransaction(fallbackHash)
-      }, 3000) // Reduced to 3 seconds for faster response
+      }, 3000) // 3 seconds for real transactions
 
       return () => clearTimeout(timeout)
     }
@@ -315,7 +405,17 @@ export function useBridge() {
 
   // Real-time transaction monitoring function
   const monitorTransaction = async (txHash) => {
-    if (!txHash || txHash === '0x...') return
+    // Skip monitoring in local mode or for mock transactions
+    if (isLocal || (txHash && txHash.startsWith('0xlocal'))) {
+      console.log('🏠 Skipping monitoring for local/mock transaction:', txHash)
+      return
+    }
+
+    // Validate transaction hash
+    if (!txHash || typeof txHash !== 'string' || txHash === '0x...' || txHash.length < 10) {
+      console.warn('⚠️ Invalid transaction hash for monitoring:', txHash)
+      return
+    }
     
     console.log('🔍 Starting transaction monitoring for:', txHash)
     
@@ -324,11 +424,11 @@ export function useBridge() {
     
     const monitorInterval = setInterval(async () => {
       attempts++
-      console.log(`🔍 Monitoring attempt ${attempts}/${maxAttempts} for ${txHash}`)
+      console.log(`📊 Monitoring attempt ${attempts}/${maxAttempts} for ${txHash}`)
       
       try {
-        // Check if transaction is confirmed
-        if (isLockReceiptSuccess && lockHash === txHash) {
+        // Check if transaction is confirmed (with safe comparison)
+        if (isLockReceiptSuccess && lockHash && typeof lockHash === 'string' && lockHash === txHash) {
           console.log('✅ Transaction confirmed via receipt')
           setTransactions(prev => prev.map(tx => 
             tx.hash === txHash ? { ...tx, status: 'confirmed' } : tx
@@ -337,8 +437,8 @@ export function useBridge() {
           return
         }
         
-        // Check if transaction failed
-        if (lockError && lockHash === txHash) {
+        // Check if transaction failed (with safe comparison)
+        if (lockError && lockHash && typeof lockHash === 'string' && lockHash === txHash) {
           console.log('❌ Transaction failed via error')
           setTransactions(prev => prev.map(tx => 
             tx.hash === txHash ? { ...tx, status: 'failed' } : tx
@@ -349,7 +449,7 @@ export function useBridge() {
         
         // Timeout after max attempts
         if (attempts >= maxAttempts) {
-          console.log('⏰ Transaction monitoring timeout')
+          console.log('⏰ Transaction monitoring timeout for:', txHash)
           setTransactions(prev => prev.map(tx => 
             tx.hash === txHash ? { ...tx, status: 'timeout' } : tx
           ))
@@ -358,14 +458,15 @@ export function useBridge() {
         }
         
       } catch (error) {
-        console.error('❌ Monitoring error:', error)
+        console.error('❌ Monitoring error for', txHash, ':', error)
+        // Continue monitoring even if there's an error
       }
     }, 1000) // Check every second
   }
 
   // Update transaction status with better error handling
   useEffect(() => {
-    if (isLockReceiptSuccess && lockHash) {
+    if (isLockReceiptSuccess && lockHash && typeof lockHash === 'string' && lockHash !== '0x...') {
       setTransactions(prev => prev.map(tx => 
         tx.hash === lockHash ? { ...tx, status: 'confirmed' } : tx
       ))
@@ -375,7 +476,7 @@ export function useBridge() {
   }, [isLockReceiptSuccess, lockHash, refetchBalance])
 
   useEffect(() => {
-    if (isMintReceiptSuccess && mintHash) {
+    if (isMintReceiptSuccess && mintHash && typeof mintHash === 'string' && mintHash !== '0x...') {
       setTransactions(prev => prev.map(tx => 
         tx.hash === mintHash ? { ...tx, status: 'minted' } : tx
       ))
@@ -386,7 +487,7 @@ export function useBridge() {
 
   // Handle transaction failures
   useEffect(() => {
-    if (lockError) {
+    if (lockError && lockHash && typeof lockHash === 'string' && lockHash !== '0x...') {
       console.error('❌ Lock transaction failed:', lockError)
       setTransactions(prev => prev.map(tx => 
         tx.hash === lockHash ? { ...tx, status: 'failed' } : tx
@@ -395,7 +496,7 @@ export function useBridge() {
   }, [lockError, lockHash])
 
   useEffect(() => {
-    if (mintError) {
+    if (mintError && mintHash && typeof mintHash === 'string' && mintHash !== '0x...') {
       console.error('❌ Mint transaction failed:', mintError)
       setTransactions(prev => prev.map(tx => 
         tx.hash === mintHash ? { ...tx, status: 'failed' } : tx
