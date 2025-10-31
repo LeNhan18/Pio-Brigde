@@ -5,7 +5,7 @@ const dotenv = require('dotenv')
 const path = require('path')
 
 // Load environment variables
-const envPath = path.join(__dirname, '../validator.env')
+const envPath = path.join(__dirname, 'validator.env')
 console.log('📁 Loading environment from:', envPath)
 dotenv.config({ path: envPath })
 

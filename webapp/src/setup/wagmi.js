@@ -25,7 +25,7 @@ export const chains = [sepolia, pioneZero]
 
 export const wagmiConfig = getDefaultConfig({
   appName: 'PIO Bridge',
-  projectId: 'YOUR_PROJECT_ID', // Có thể để trống cho test
+  projectId: import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID || 'pio-bridge-project', 
   chains,
   transports: {
     [sepolia.id]: http(import.meta.env.VITE_SEPOLIA_RPC || 'https://ethereum-sepolia.blockpi.network/v1/rpc/public'),
@@ -37,6 +37,8 @@ export const wagmiConfig = getDefaultConfig({
       wait: 16,
     },
   },
+  enableWebSocketSub: false, // Disable WebSocket for better stability
+  pollingInterval: 4000, // Poll every 4 seconds
 })
 
 

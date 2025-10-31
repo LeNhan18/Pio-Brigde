@@ -1,10 +1,11 @@
-const { ethers } = require('hardhat')
+// Use ethers directly (installed locally)
+const { ethers } = require('ethers')
 const fs = require('fs')
 const path = require('path')
 const dotenv = require('dotenv')
 
 // Load environment variables
-dotenv.config({ path: path.join(__dirname, '../validator.env') })
+dotenv.config({ path: path.join(__dirname, 'validator.env') })
 
 // Configuration
 const CONFIG = {
@@ -107,8 +108,74 @@ class ValidatorBot {
     console.log('🤖 Starting Validator Bot...')
     this.isRunning = true
     
-    // Start monitoring
+    // 🚀 Start realtime event listener
+    console.log('⚡ Setting up realtime event listener...')
+    this.lockContract.on('Locked', async (lockId, sender, to, amount, event) => {
+      console.log('🎉 REALTIME Locked event received!', {
+        lockId: lockId.toString(),
+        sender: sender,
+        to: to,
+        amount: ethers.formatEther(amount),
+        txHash: event.transactionHash,
+        blockNumber: event.blockNumber
+      })
+      
+      const eventId = `${event.transactionHash}-${event.logIndex}`
+      if (!this.processedEvents.has(eventId)) {
+        await this.processLockEvent(event)
+        this.processedEvents.add(eventId)
+      }
+    })
+    
+    // 🔍 Check recent blocks on startup
+    console.log('🔄 Checking recent blocks for any missed events...')
+    try {
+      const latestBlock = await this.pioneProvider.getBlockNumber()
+      const fromBlock = Math.max(0, latestBlock - 100) // Check last 100 blocks on startup
+      const filter = this.lockContract.filters.Locked()
+      const recentEvents = await this.lockContract.queryFilter(filter, fromBlock, latestBlock)
+      
+      if (recentEvents.length > 0) {
+        console.log(`📨 Found ${recentEvents.length} recent Locked events in blocks ${fromBlock}-${latestBlock}`)
+        for (const event of recentEvents) {
+          console.log('📋 Recent event:', {
+            lockId: event.args.lockId.toString(),
+            txHash: event.transactionHash,
+            blockNumber: event.blockNumber
+          })
+        }
+      } else {
+        console.log(`📝 No recent Locked events found in blocks ${fromBlock}-${latestBlock}`)
+      }
+    } catch (error) {
+      console.error('❌ Error checking recent blocks:', error.message)
+    }
+    
+    // Start polling as backup
     this.monitorLockEvents()
+    
+    // Setup stdin for manual commands
+    process.stdin.setEncoding('utf8')
+    process.stdin.on('data', async (input) => {
+      const command = input.trim()
+      if (command.startsWith('check ')) {
+        const txHash = command.substring(6).trim()
+        await this.checkSpecificTransaction(txHash)
+      } else if (command === 'status') {
+        console.log('📊 Validator Status:', {
+          isRunning: this.isRunning,
+          processedEvents: this.processedEvents.size,
+          validators: this.validators.length
+        })
+      } else if (command === 'help') {
+        console.log('📋 Available commands:')
+        console.log('  check <txHash> - Check specific transaction')
+        console.log('  status - Show validator status')
+        console.log('  help - Show this help')
+      }
+    })
+    
+    console.log('💡 Type "help" for available commands')
     
     // Keep the process alive
     process.on('SIGINT', () => {
@@ -118,6 +185,43 @@ class ValidatorBot {
     })
   }
 
+  async checkSpecificTransaction(txHash) {
+    console.log(`🔍 Checking specific transaction: ${txHash}`)
+    try {
+      const receipt = await this.pioneProvider.getTransactionReceipt(txHash)
+      if (receipt) {
+        console.log('✅ Transaction found:', {
+          status: receipt.status,
+          blockNumber: receipt.blockNumber,
+          gasUsed: receipt.gasUsed?.toString(),
+          logs: receipt.logs.length
+        })
+        
+        // Parse logs for Locked events
+        const lockInterface = new ethers.Interface(require('../contracts/artifacts/contracts/PIOLock.sol/PIOLock.json').abi)
+        receipt.logs.forEach((log, index) => {
+          try {
+            const parsed = lockInterface.parseLog(log)
+            if (parsed.name === 'Locked') {
+              console.log(`🎉 Found Locked event in log ${index}:`, {
+                lockId: parsed.args.lockId.toString(),
+                sender: parsed.args.sender,
+                to: parsed.args.to,
+                amount: ethers.formatEther(parsed.args.amount)
+              })
+            }
+          } catch (e) {
+            // Not a PIOLock event
+          }
+        })
+      } else {
+        console.log('❌ Transaction not found or not confirmed yet')
+      }
+    } catch (error) {
+      console.error('❌ Error checking transaction:', error.message)
+    }
+  }
+
   async monitorLockEvents() {
     console.log('👂 Listening for Locked events...')
     
@@ -125,11 +229,19 @@ class ValidatorBot {
       try {
         // Get latest block number
         const latestBlock = await this.pioneProvider.getBlockNumber()
-        const fromBlock = Math.max(0, latestBlock - 100) // Check last 100 blocks
+        const fromBlock = Math.max(0, latestBlock - 10) // Check last 10 blocks (more recent)
+        
+        console.log(`🔍 Checking blocks ${fromBlock} to ${latestBlock} for Locked events...`)
         
         // Get Locked events
         const filter = this.lockContract.filters.Locked()
         const events = await this.lockContract.queryFilter(filter, fromBlock, latestBlock)
+        
+        if (events.length === 0) {
+          console.log(`📝 No Locked events found in blocks ${fromBlock}-${latestBlock}`)
+        } else {
+          console.log(`📨 Found ${events.length} Locked events in blocks ${fromBlock}-${latestBlock}`)
+        }
         
         for (const event of events) {
           const eventId = `${event.transactionHash}-${event.logIndex}`
@@ -164,68 +276,145 @@ class ValidatorBot {
   }
 
   async processLockEvent(event) {
-    const { lockId, to, amount } = event.args
+    const { lockId, sender, destination, amount } = event.args
     
-    console.log(`🔄 Processing Locked event:`, {
-      lockId: lockId.toString(),
-      to: to,
-      amount: ethers.formatEther(amount)
-    })
+    this.log(`🔄 Processing Locked event: lockId=${lockId}, sender=${sender}, destination=${destination}, amount=${ethers.formatEther(amount)}`)
     
     try {
-      // Check if already approved by enough validators
-      const approvalCount = await this.mintContract.approvalCount(lockId)
-      console.log(`📊 Current approval count: ${approvalCount}/${CONFIG.APPROVAL_THRESHOLD}`)
+      // Enhanced validation
+      await this.verifyLockEventIntegrity(event)
       
-      if (approvalCount >= CONFIG.APPROVAL_THRESHOLD) {
-        console.log('✅ Already approved by enough validators')
+      // Check if already processed or approved
+      const isProcessed = await this.mintContract.processed(lockId)
+      if (isProcessed) {
+        this.log(`⚠️ LockId ${lockId} already processed, skipping`)
         return
       }
       
-      // Get validators who haven't approved yet
-      const validatorsToApprove = []
+      const approvalCount = await this.mintContract.approvalCount(lockId)
+      this.log(`📊 Current approval count: ${approvalCount}/${CONFIG.APPROVAL_THRESHOLD}`)
       
-      for (const validator of this.validators) {
+      if (approvalCount >= CONFIG.APPROVAL_THRESHOLD) {
+        this.log(`✅ LockId ${lockId} already approved by enough validators`)
+        return
+      }
+      
+      // Process approvals with enhanced security
+      await this.processValidatorApprovals(lockId, destination, amount)
+      
+    } catch (error) {
+      this.log(`❌ Error processing lock event: ${error.message}`)
+      console.error(error)
+    }
+  }
+
+  async processValidatorApprovals(lockId, destination, amount) {
+    // Get validators who haven't approved yet
+    const validatorsToApprove = []
+    
+    for (const validator of this.validators) {
+      try {
         const hasApproved = await this.mintContract.hasApproved(lockId, validator.address)
         if (!hasApproved) {
           validatorsToApprove.push(validator)
         }
+      } catch (error) {
+        this.log(`⚠️ Error checking validator ${validator.index} approval status: ${error.message}`)
       }
-      
-      console.log(`👥 Validators to approve: ${validatorsToApprove.length}`)
-      
-      // Approve with available validators
-      for (const validator of validatorsToApprove) {
-        try {
-          console.log(`🔐 Validator ${validator.index} approving...`)
-          
-          const tx = await this.mintContract
-            .connect(validator.wallet)
-            .approveMint(lockId, to, amount)
-          
-          console.log(`✅ Validator ${validator.index} approval tx: ${tx.hash}`)
-          
-          // Wait for transaction confirmation
-          await tx.wait()
-          console.log(`✅ Validator ${validator.index} approval confirmed`)
-          
-          // Check if we've reached the threshold
-          const newApprovalCount = await this.mintContract.approvalCount(lockId)
-          console.log(`📊 New approval count: ${newApprovalCount}/${CONFIG.APPROVAL_THRESHOLD}`)
-          
-          if (newApprovalCount >= CONFIG.APPROVAL_THRESHOLD) {
-            console.log('🎉 Threshold reached! Minting should happen automatically...')
-            break
-          }
-          
-        } catch (error) {
-          console.error(`❌ Validator ${validator.index} approval failed:`, error.message)
-        }
-      }
-      
-    } catch (error) {
-      console.error('❌ Error processing lock event:', error)
     }
+    
+    this.log(`👥 Validators to approve: ${validatorsToApprove.length}`)
+    
+    // Process approvals sequentially to avoid nonce conflicts
+    for (const validator of validatorsToApprove) {
+      try {
+        await this.executeValidatorApproval(validator, lockId, destination, amount)
+        
+        // Check if threshold reached after each approval
+        const currentApprovalCount = await this.mintContract.approvalCount(lockId)
+        this.log(`📊 Updated approval count: ${currentApprovalCount}/${CONFIG.APPROVAL_THRESHOLD}`)
+        
+        if (currentApprovalCount >= CONFIG.APPROVAL_THRESHOLD) {
+          this.log(`🎉 Threshold reached! Monitoring for mint execution...`)
+          await this.monitorMintExecution(lockId, destination)
+          break
+        }
+        
+        // Add delay between approvals to prevent network congestion
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        
+      } catch (error) {
+        this.log(`❌ Validator ${validator.index} approval failed: ${error.message}`)
+      }
+    }
+  }
+
+  async executeValidatorApproval(validator, lockId, destination, amount) {
+    this.log(`🔐 Validator ${validator.index} (${validator.address}) approving lockId=${lockId}`)
+    
+    // Estimate gas first
+    const gasEstimate = await this.mintContract
+      .connect(validator.wallet)
+      .estimateGas.approveMint(lockId, destination, amount)
+    
+    this.log(`⛽ Gas estimate for validator ${validator.index}: ${gasEstimate.toString()}`)
+    
+    // Execute with higher gas limit for safety
+    const tx = await this.mintContract
+      .connect(validator.wallet)
+      .approveMint(lockId, destination, amount, {
+        gasLimit: gasEstimate * BigInt(120) / BigInt(100) // 20% buffer
+      })
+    
+    this.log(`✅ Validator ${validator.index} approval tx submitted: ${tx.hash}`)
+    
+    // Wait for confirmation
+    const receipt = await tx.wait()
+    this.log(`✅ Validator ${validator.index} approval confirmed in block ${receipt.blockNumber}`)
+    
+    return receipt
+  }
+
+  async monitorMintExecution(lockId, destination) {
+    this.log(`👀 Monitoring mint execution for lockId=${lockId}`)
+    
+    // Listen for Minted events
+    const filter = this.mintContract.filters.Minted(lockId)
+    
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        this.log(`⏰ Mint monitoring timeout for lockId=${lockId}`)
+        resolve()
+      }, 30000) // 30 second timeout
+      
+      this.mintContract.once(filter, (lockId, to, amount, event) => {
+        clearTimeout(timeout)
+        this.log(`🚀 Mint executed! lockId=${lockId}, to=${to}, amount=${ethers.formatEther(amount)}`)
+        this.log(`📝 Mint transaction hash: ${event.transactionHash}`)
+        resolve()
+      })
+    })
+  }
+
+  async verifyLockEventIntegrity(event) {
+    // Verify transaction exists and is confirmed
+    const tx = await this.pioneProvider.getTransaction(event.transactionHash)
+    const receipt = await this.pioneProvider.getTransactionReceipt(event.transactionHash)
+    
+    if (!tx || !receipt || !receipt.status) {
+      throw new Error(`Invalid or failed transaction: ${event.transactionHash}`)
+    }
+    
+    if (receipt.confirmations < 3) {
+      throw new Error(`Insufficient confirmations: ${receipt.confirmations}`)
+    }
+    
+    // Verify the event came from correct contract
+    if (event.address.toLowerCase() !== CONFIG.PIONE_ZERO.lockContract.toLowerCase()) {
+      throw new Error(`Event from unexpected contract: ${event.address}`)
+    }
+    
+    this.log(`✅ Lock event integrity verified: tx=${event.transactionHash}`)
   }
 
   log(message) {
@@ -234,8 +423,12 @@ class ValidatorBot {
     
     console.log(logMessage)
     
-    // Write to log file
-    fs.appendFileSync(CONFIG.LOG_FILE, logMessage + '\n')
+    // Write to log file with error handling
+    try {
+      fs.appendFileSync(path.join(__dirname, CONFIG.LOG_FILE), logMessage + '\n')
+    } catch (error) {
+      console.error('❌ Failed to write to log file:', error.message)
+    }
   }
 
   // Enhanced security monitoring

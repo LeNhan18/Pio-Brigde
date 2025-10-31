@@ -7,6 +7,9 @@ import NetworkStatus from '../../components/NetworkStatus'
 import ContractStatus from '../../components/ContractStatus'
 import DebugInfo from '../../components/DebugInfo'
 import SecurityDashboard from '../../components/SecurityDashboard'
+import BridgeStatus from '../../components/BridgeStatus'
+import BridgeDebugPanel from '../../components/BridgeDebugPanel'
+import ApprovalTimeoutHandler from '../../components/ApprovalTimeoutHandler'
 
 export default function Bridge(){
   const {
@@ -26,7 +29,19 @@ export default function Bridge(){
     pendingTransaction,
     approveHash,
     isApprovePending,
-    isApproveSuccess
+    isApproveSuccess,
+    isApproveReceiptSuccess,
+    approveError,
+    lockError,
+    bridgeState,
+    isListeningForEvents,
+    resetBridgeState,
+    forceApprovalProceed,
+    checkTransactionStatus,
+    transactionHistory,
+    clearTransactionHistory,
+    getTransactionStats,
+    forceUpdateTransactionStatus
   } = useBridge()
 
   const [amount, setAmount] = useState('')
@@ -71,8 +86,21 @@ export default function Bridge(){
         alert('Số dư không đủ!')
         return
       }
+
+      // Đảm bảo ở đúng mạng Pione Zero trước khi bridge
+      if (chainId !== 5080) {
+        console.log('🔄 Switching to Pione Zero network...')
+        await switchChain({ chainId: 5080 })
+        return // Dừng lại để user tương tác với MetaMask
+      }
+
+      console.log('🚀 Starting bridge transaction - MetaMask popup sẽ hiển thị...')
+      console.log('📝 Bridge parameters:', { amount, destination, chainId })
       
-      // Real bridge transaction
+      // Reset bridge state trước khi bridge mới
+      resetBridgeState()
+      
+      // Real bridge transaction - sẽ trigger MetaMask popup
       const result = await bridgePZO(amount, destination)
       
       if (result === 'pending') {
@@ -191,6 +219,26 @@ export default function Bridge(){
         <ContractStatus 
           PIOLock_ADDRESS={PIOLock_ADDRESS}
           PIOMint_ADDRESS={PIOMint_ADDRESS}
+        />
+        
+        {/* Bridge Status */}
+        <BridgeStatus 
+          bridgeState={bridgeState}
+          isProcessing={isProcessing}
+        />
+
+        {/* Bridge Debug Panel */}
+        <BridgeDebugPanel
+          bridgeState={bridgeState}
+          approveHash={approveHash}
+          isApproveSuccess={isApproveSuccess}
+          isApproveReceiptSuccess={isApproveReceiptSuccess}
+          approveError={approveError}
+          lockHash={lockHash}
+          isLockSuccess={isLockSuccess}
+          lockError={lockError}
+          resetBridgeState={resetBridgeState}
+          checkTransactionStatus={checkTransactionStatus}
         />
         
         {/* Debug Info */}
@@ -420,29 +468,264 @@ export default function Bridge(){
         />
       </div>
 
-      {/* Transaction History */}
+      {/* Transaction History - New Enhanced Version */}
       <div className="panel bridge-card" style={{ flex: 1, minWidth: 500 }}>
-        <div style={{ fontWeight: 700, marginBottom: 20, fontSize: 20 }}>
-          Lịch sử giao dịch
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div style={{ fontWeight: 700, fontSize: 20 }}>
+            📚 Lịch sử giao dịch {transactionHistory.length > 0 && `(${transactionHistory.length})`}
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {/* View Bridge Contract Button */}
+            <button 
+              onClick={() => {
+                const explorerUrl = `https://zeroscan.org/address/${PIOLock_ADDRESS}`
+                window.open(explorerUrl, '_blank')
+              }}
+              style={{ 
+                padding: '5px 10px', 
+                fontSize: 12, 
+                background: '#6366f1', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: 4,
+                cursor: 'pointer'
+              }}
+              title="Xem Bridge Contract trên Zeroscan"
+            >
+              🔗 Contract
+            </button>
+            
+            {/* Force Update Button - khi bridge đã hoàn thành nhưng lịch sử chưa cập nhật */}
+            {bridgeState.step === 'success' && transactionHistory.some(tx => tx.status !== 'hoàn thành') && (
+              <button 
+                onClick={forceUpdateTransactionStatus}
+                style={{ 
+                  padding: '5px 10px', 
+                  fontSize: 12, 
+                  background: '#10b981', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: 4,
+                  cursor: 'pointer'
+                }}
+                title="Cập nhật status thành hoàn thành"
+              >
+                🔧 Fix Status
+              </button>
+            )}
+            
+            {/* Clear History Button */}
+            {transactionHistory.length > 0 && (
+              <button 
+                onClick={clearTransactionHistory}
+                style={{ 
+                  padding: '5px 10px', 
+                  fontSize: 12, 
+                  background: '#ff4444', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: 4,
+                  cursor: 'pointer'
+                }}
+              >
+                🗑️ Xóa tất cả
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Statistics */}
+        {transactionHistory.length > 0 && (
+          <div style={{ 
+            display: 'flex', 
+            gap: 10, 
+            marginBottom: 15,
+            padding: '10px',
+            background: 'rgba(0,255,0,0.1)',
+            borderRadius: 8,
+            fontSize: 12
+          }}>
+            {(() => {
+              const stats = getTransactionStats()
+              return (
+                <>
+                  <span>✅ Thành công: {stats.completed}</span>
+                  <span>❌ Thất bại: {stats.failed}</span>
+                  <span>⏳ Đang xử lý: {stats.processing}</span>
+                </>
+              )
+            })()}
+          </div>
+        )}
         
-        {transactions.length === 0 ? (
+        {transactionHistory.length === 0 ? (
           <div style={{ textAlign: 'center', opacity: 0.6, padding: '40px 20px' }}>
             Chưa có giao dịch nào
           </div>
         ) : (
           <div style={{ maxHeight: 400, overflowY: 'auto' }}>
-            {transactions.map((tx, index) => (
-              <TransactionStatus 
-                key={index} 
-                transaction={tx} 
-                onViewExplorer={onViewExplorer}
-                onRetry={onRetryTransaction}
-              />
+            {transactionHistory.map((tx) => (
+              <div 
+                key={tx.id} 
+                style={{ 
+                  padding: '15px', 
+                  margin: '10px 0',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 8,
+                  fontSize: 13
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ marginBottom: 8 }}>
+                      <strong>{tx.amount} PZO</strong> → {tx.destination?.slice(0,6)}...{tx.destination?.slice(-4)}
+                    </div>
+                    <div style={{ opacity: 0.7, fontSize: 11 }}>
+                      📅 {tx.date} | ⚡ {tx.method || 'standard'}
+                    </div>
+                    {tx.lockId && (
+                      <div style={{ marginTop: 5, opacity: 0.6, fontSize: 11 }}>
+                        🔒 Lock ID: {tx.lockId}
+                      </div>
+                    )}
+                    {tx.lockHash && tx.lockHash !== 'timeout_fallback' && (
+                      <div style={{ 
+                        marginTop: 3, 
+                        opacity: 0.6, 
+                        fontSize: 10, 
+                        wordBreak: 'break-all',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => {
+                        navigator.clipboard.writeText(tx.lockHash)
+                        alert('Hash đã copy!')
+                      }}
+                      title="Click để copy hash">
+                        📝 Hash: {tx.lockHash.slice(0, 10)}...{tx.lockHash.slice(-8)}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
+                    <div style={{ 
+                      padding: '3px 8px',
+                      borderRadius: 12,
+                      fontSize: 10,
+                      background: tx.status === 'hoàn thành' ? '#4ade80' : 
+                                 tx.status === 'thất bại' ? '#ef4444' : '#fbbf24',
+                      color: 'black',
+                      fontWeight: 'bold'
+                    }}>
+                      {tx.status}
+                    </div>
+                    
+                    {/* View Transaction Button */}
+                    <button
+                      onClick={() => {
+                        if (tx.lockHash && tx.lockHash !== 'timeout_fallback') {
+                          // Có hash cụ thể, mở transaction trên Zeroscan
+                          const explorerUrl = `https://zeroscan.org/tx/${tx.lockHash}`
+                          console.log('🔍 Opening Zeroscan for transaction:', tx.lockHash)
+                          window.open(explorerUrl, '_blank')
+                        } else {
+                          // Không có hash, mở address để xem tất cả transactions
+                          const explorerUrl = `https://zeroscan.org/address/${tx.destination}`
+                          console.log('🔍 Opening Zeroscan for address:', tx.destination)
+                          window.open(explorerUrl, '_blank')
+                        }
+                      }}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: 10,
+                        background: tx.lockHash && tx.lockHash !== 'timeout_fallback' ? '#10b981' : '#64748b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 4,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 3,
+                        fontWeight: 'bold'
+                      }}
+                      onMouseOver={(e) => e.target.style.background = tx.lockHash && tx.lockHash !== 'timeout_fallback' ? '#059669' : '#475569'}
+                      onMouseOut={(e) => e.target.style.background = tx.lockHash && tx.lockHash !== 'timeout_fallback' ? '#10b981' : '#64748b'}
+                      title={tx.lockHash && tx.lockHash !== 'timeout_fallback' ? 
+                        `Xem transaction ${tx.lockHash.slice(0,10)}... trên Zeroscan` : 
+                        'Xem address trên Zeroscan'
+                      }
+                    >
+                      {tx.lockHash && tx.lockHash !== 'timeout_fallback' ? (
+                        <>🔗 View TX</>
+                      ) : (
+                        <>👤 Address</>
+                      )}
+                    </button>
+                    
+                    {/* Retry Button for failed transactions */}
+                    {tx.status === 'thất bại' && (
+                      <button
+                        onClick={() => onRetryTransaction({
+                          amount: tx.amount,
+                          destination: tx.destination
+                        })}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: 10,
+                          background: '#f59e0b',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: 4,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 3
+                        }}
+                        onMouseOver={(e) => e.target.style.background = '#d97706'}
+                        onMouseOut={(e) => e.target.style.background = '#f59e0b'}
+                      >
+                        🔄 Retry
+                      </button>
+                    )}
+                    
+                    {/* Debug: Show transaction details */}
+                    {(tx.status === 'đang chờ xác nhận lock' || tx.status === 'đang chờ hash từ wagmi') && (
+                      <button
+                        onClick={() => {
+                          console.log('🔍 Transaction Debug Info:', tx)
+                          alert(`Transaction ID: ${tx.id}\nStatus: ${tx.status}\nLock Hash: ${tx.lockHash || 'None'}\nTimestamp: ${new Date(tx.timestamp).toLocaleString()}`)
+                        }}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: 10,
+                          background: '#8b5cf6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: 4,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 3
+                        }}
+                      >
+                        🔍 Debug
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         )}
       </div>
+      
+      {/* Approval Timeout Handler */}
+      <ApprovalTimeoutHandler
+        bridgeState={bridgeState}
+        approveHash={approveHash}
+        onForceProceeed={() => forceApprovalProceed(amount, destination)}
+        onRetry={resetBridgeState}
+      />
     </div>
   )
 }
