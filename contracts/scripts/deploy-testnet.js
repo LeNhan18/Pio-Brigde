@@ -45,11 +45,11 @@ async function main() {
     // Deploy PIOLock on Pione Zero
     const pioToken = process.env.PIO_TOKEN || "0xdc2436650c1Ab0767aB0eDc1267a219F54cf7147";
     if (pioToken === "0xdc2436650c1Ab0767aB0eDc1267a219F54cf7147") {
-      console.log("⚠️  Using zero address for PIO_TOKEN (for testing only)");
-      console.log("💡 Update PIO_TOKEN with real address for production");
+      console.log("  Using zero address for PIO_TOKEN (for testing only)");
+      console.log(" Update PIO_TOKEN with real address for production");
     }
 
-    console.log(`🔒 Deploying PIOLock with PIO token: ${pioToken}`);
+    console.log(` Deploying PIOLock with PIO token: ${pioToken}`);
     
     const Lock = await ethers.getContractFactory("PIOLock");
     const lock = await Lock.deploy(pioToken, validators);
@@ -58,11 +58,11 @@ async function main() {
     contractAddress = await lock.getAddress();
     contractName = "PIOLock";
     
-    console.log("✅ PIOLock deployed successfully!");
+    console.log(" PIOLock deployed successfully!");
     
   } else if (name === "sepolia" || name === "hardhat") {
     // Deploy PIOMint on Mumbai, Sepolia, or Hardhat
-    console.log("🪙 Deploying PIOMint...");
+    console.log(" Deploying PIOMint...");
     
     const Mint = await ethers.getContractFactory("PIOMint");
     const mint = await Mint.deploy(validators);
@@ -71,32 +71,32 @@ async function main() {
     contractAddress = await mint.getAddress();
     contractName = "PIOMint";
     
-    console.log("✅ PIOMint deployed successfully!");
+    console.log(" PIOMint deployed successfully!");
     
   } else {
-    console.log("❌ Unsupported network for deployment");
-    console.log("💡 Supported networks: pionezero, sepolia, hardhat");
+    console.log(" Unsupported network for deployment");
+    console.log(" Supported networks: pionezero, sepolia, hardhat");
     process.exit(1);
   }
 
   // Display deployment results
-  console.log("\n🎉 Deployment Summary:");
-  console.log(`📋 Network: ${name}`);
-  console.log(`📋 Contract: ${contractName}`);
-  console.log(`📍 Address: ${contractAddress}`);
-  console.log(`👥 Validators: ${validators.length}/5`);
+  console.log("\n Deployment Summary:");
+  console.log(` Network: ${name}`);
+  console.log(` Contract: ${contractName}`);
+  console.log(` Address: ${contractAddress}`);
+  console.log(` Validators: ${validators.length}/5`);
   
   // Verify contract (optional)
   if (process.env.VERIFY === "true") {
-    console.log("\n🔍 Verifying contract...");
+    console.log("\n Verifying contract...");
     try {
       await hre.run("verify:verify", {
         address: contractAddress,
         constructorArguments: name === "pionezero" ? [process.env.PIO_TOKEN, validators] : [validators],
       });
-      console.log("✅ Contract verified successfully!");
+      console.log(" Contract verified successfully!");
     } catch (error) {
-      console.log("⚠️  Verification failed:", error.message);
+      console.log("  Verification failed:", error.message);
     }
   }
 
@@ -110,11 +110,11 @@ async function main() {
     deployer: deployer.address,
   };
 
-  console.log("\n📄 Deployment Info:");
+  console.log("\n Deployment Info:");
   console.log(JSON.stringify(deploymentInfo, null, 2));
 }
 
 main().catch((e) => {
-  console.error("❌ Deployment failed:", e);
+  console.error(" Deployment failed:", e);
   process.exit(1);
 });
